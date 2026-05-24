@@ -1,0 +1,13 @@
+name: Playwright
+
+# Planning note: dedicated E2E workflow for campaign and module flows.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Planning placeholder
+        run: echo "Replace with browser install and Playwright execution pipeline."

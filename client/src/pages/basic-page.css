@@ -1,0 +1,4 @@
+.basic-page {
+	display: grid;
+	gap: var(--space-3);
+}

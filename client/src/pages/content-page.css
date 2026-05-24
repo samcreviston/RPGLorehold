@@ -1,0 +1,10 @@
+.content-page {
+	display: grid;
+	gap: var(--space-4);
+}
+
+.content-page select {
+	max-width: 360px;
+	background: rgba(255, 255, 255, 0.92);
+	color: var(--base-slate-black);
+}

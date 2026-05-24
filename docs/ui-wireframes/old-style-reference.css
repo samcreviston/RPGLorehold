@@ -1,0 +1,325 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&display=swap');
+
+:root {
+    --Fira-heading-font: "Fira Sans Condensed", sans-serif;
+    --sorts-body-font: "Sorts Mill Goudy", serif;
+
+    --primary-purple: #210B2C;
+    --primary-tan: #C0A177;
+    --accent1-red: #B71815;
+    --accent2-white: #F5F5F5;
+    --bright-blue: #5CAFC8;
+    --base-slate-black: #141414;
+
+    /* rgba versions of all above colors */
+    --primary-purple-rgba: rgba(33, 11, 44, 1);
+    --primary-tan-rgba: rgba(192, 161, 119, 1);
+    --accent1-red-rgba: rgba(183, 24, 21, .4);
+    --accent2-white-rgba: rgba(245, 245, 245, .4);
+    --bright-blue-rgba: rgba(92, 175, 200, 1);
+
+}
+
+* {
+    margin: 0px;
+    padding: 0px;
+}
+
+body {
+    margin: 0 auto;
+    padding: 0;
+
+    font-family: var(--sorts-body-font);
+    font-size: 18px;
+    text-align: center;
+
+    background-color: var(--accent2-white);
+}
+
+header {
+    display: grid;
+    grid-template-columns: 1fr 6fr 1fr;
+
+    color: var(--accent2-white);
+    background-color: var(--primary-purple);
+
+    font-family: var(--Fira-heading-font);
+}
+
+h1 {
+    margin: 0px 10px 10px 10px;
+    padding: 20px;
+    font-weight: 500px;
+    font-size: 3rem;
+
+    color: var(--accent2-white);
+    background-color: var(--primary-purple);
+}
+
+#header-logo {
+    max-width: 100px;
+    margin-top: 5px;
+    aspect-ratio: 1/1;
+}
+
+#title-section {
+    padding: 0px 20px;
+}
+
+#main-title {
+    margin: 0px;
+}
+
+#main-subtitle {
+    padding-bottom: 20px;
+}
+
+header a {
+    color: var(--accent2-white);
+    align-self: center;
+    margin-right: 20px;
+}
+
+
+
+#welcome-section {
+    padding: 20px;
+
+    color: var(--base-slate-black);
+    text-shadow: 2px 2px 4  px rgba(255, 255, 255, 0.2);
+}
+
+main {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)), url('../images/floral-paper-canvas-or-parchment.webp');
+}
+
+.narrow-main {
+    margin: 0px auto;
+    max-width: 900px;
+    
+    
+}
+
+#content-section-title {
+    padding: 10px;
+    font-size: 2rem;
+    font-family: var(--Fira-heading-font);
+}
+
+#campaign-list-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    
+}
+
+.compact-campaign-card {
+    width: 90%;
+    margin: 20px;
+    padding: 10px;
+
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr;
+    align-items: center;
+    justify-items: center;
+
+    background-color: var(--accent1-red-rgba);
+    margin-bottom: 5px;
+    
+}
+
+.full-campaign-card {
+    width: 90%;
+    margin: 20px;
+    padding: 10px;
+
+    border-top: 4px solid var(--accent1-red);
+    border-bottom: 4px solid var(--accent1-red);
+    border-radius: 10px;
+}
+
+#campaign-list-section a {
+    color: var(--base-slate-black);
+}
+
+footer {
+    display: grid;
+    grid-template-columns: 4fr 1fr 4fr;
+    
+    color: var(--accent2-white);
+    background-color: var(--primary-purple);
+    align-items: center;
+}
+
+#left-footer, #last-modified {
+    text-align: center;
+    margin: 10px;
+}
+
+label {
+    margin-bottom: 10px;
+}
+
+button {
+    background-color: var(--primary-purple);
+    color: var(--accent2-white);
+    padding: 10px;
+    margin: 10px;
+    border: 0px;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.overlay {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9); /* attempt to darken during dialog */
+    z-index: 99;
+    display: none;
+  }
+
+dialog {
+    background-color: var(--accent2-white);
+    align-self: center;
+    justify-self: center;
+}
+
+/* unique to thank you page */
+#thank-you {
+    background-color: var(--accent1-red-rgba);
+    border-radius: 10px;
+    margin-top: -10px;
+
+    color: var(--base-slate-black);
+    text-shadow: 2px 2px 4  px rgba(255, 255, 255, 0.3);
+}
+
+.thank-you-p {
+    color: var(--base-slate-black);
+    text-shadow: 2px 2px 4  px rgba(255, 255, 255, 0.3);
+    font-size: 1.4rem;
+}
+
+
+
+/* Unique to Campaign Pages */
+.campaign-header {
+    padding: 20px;
+    background-color: var(--accent1-red);
+}
+
+.author {
+    margin-bottom: 20px;
+}
+
+.adventure {
+    width: 80%;
+    margin: 0 auto;
+}
+
+.adventure-header {
+    margin: 10px 0px;
+
+    text-decoration: underline;
+    background-color: var(--accent1-red-rgba);
+}
+
+.flavor-text {
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+.DM-note {
+    margin-top: 20px;
+}
+
+
+
+/* hover modals */
+.container {
+    position: relative;
+    display: inline;
+}
+
+/* Ensure divs are displayed inline */
+.adventure-content, .hover-trigger, .modal {
+    display: inline;
+}
+
+/* Additional styling for modal */
+.hover-trigger {
+    position: relative;
+
+    color: var(--accent1-red);
+    text-decoration: underline;
+}
+
+.modal {
+    display: none;
+    position: absolute;
+    bottom: 125%; /* Position above the sentence */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    z-index: 10;
+    width: 200px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.hover-trigger:hover .modal {
+    display: block;
+    opacity: 1;
+}
+
+
+
+
+
+/* mobile below */
+@media screen and (max-width: 800px) {
+
+    header {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #header-logo {
+        margin: 25px auto;
+        max-width: 200px;
+    }
+
+    header a {
+        margin-bottom: 25px;
+    }
+
+    footer {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    #left-footer {
+        margin-top: 20px;
+    }
+
+    #last-modified {
+        margin: 20px;
+    }
+
+    .adventure {
+        width: 90%;
+    }
+}

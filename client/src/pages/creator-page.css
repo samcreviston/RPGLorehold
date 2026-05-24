@@ -1,0 +1,19 @@
+.creator-page {
+	display: grid;
+	gap: var(--space-4);
+}
+
+.creator-page select {
+	max-width: 360px;
+	background: rgba(255, 255, 255, 0.92);
+	color: var(--base-slate-black);
+}
+
+.template-card {
+	padding: var(--space-4);
+	border: 1px solid rgba(33, 11, 44, 0.28);
+	border-radius: var(--radius-md);
+	background: rgba(245, 245, 245, 0.76);
+	display: grid;
+	gap: var(--space-2);
+}

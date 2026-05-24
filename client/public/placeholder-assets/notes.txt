@@ -1,0 +1,3 @@
+﻿Planning note:
+- Responsibility: placeholder file for project setup and implementation planning.
+- Required future content: scoped configuration, validation rules, and environment guidance.

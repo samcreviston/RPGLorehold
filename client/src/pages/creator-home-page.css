@@ -1,0 +1,13 @@
+.creator-home-page {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.primary-action {
+	justify-self: start;
+}
+
+.page-note {
+	font-size: var(--text-sm);
+	color: rgba(20, 20, 20, 0.78);
+}

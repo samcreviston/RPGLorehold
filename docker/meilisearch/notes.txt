@@ -1,0 +1,3 @@
+Planning note:
+- Responsibility: container strategy notes for Meilisearch deployment and index lifecycle.
+- Future logic focus: index naming, settings versioning, and rebuild/sync procedures from MongoDB updates.

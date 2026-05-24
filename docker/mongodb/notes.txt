@@ -1,0 +1,3 @@
+Planning note:
+- Responsibility: MongoDB container notes for local and CI environments.
+- Future logic focus: migration strategy, seed datasets, and backup/restore workflow.

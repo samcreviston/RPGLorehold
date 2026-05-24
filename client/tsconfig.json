@@ -1,0 +1,12 @@
+{
+  "planningNote": "Client TypeScript config for strict React architecture and modular feature growth.",
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["vite/client", "jest"],
+    "baseUrl": "./src",
+    "noEmit": true
+  },
+  "include": ["src", "vite.config.ts", "jest.config.ts", "playwright.config.ts"],
+  "exclude": ["node_modules"]
+}

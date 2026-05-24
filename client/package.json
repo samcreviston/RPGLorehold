@@ -1,0 +1,49 @@
+{
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontend planning scaffold for RPG module platform.",
+  "planningNotes": {
+    "responsibility": "React application shell, route architecture, reusable UI systems, and state boundaries.",
+    "futureFocus": [
+      "module creator drag and drop",
+      "rich text editing",
+      "OpenAI-assisted authoring UX"
+    ]
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "jest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@tiptap/react": "^2.8.0",
+    "@tiptap/starter-kit": "^2.8.0",
+    "axios": "^1.9.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.57.0",
+    "react-router-dom": "^7.6.3",
+    "zustand": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.30.1",
+    "jest": "^30.0.5",
+    "playwright": "^1.54.2",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}

@@ -1,0 +1,85 @@
+﻿:root {
+	color-scheme: dark;
+}
+
+html,
+body {
+	background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+		url('../assets/RPGLoreholdBackground.webp');
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: right center;
+	color: var(--color-text);
+	font-family: var(--font-body);
+	min-height: 100%;
+}
+
+#root {
+	min-height: 100vh;
+}
+
+body {
+	line-height: 1.5;
+	font-size: var(--text-md);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	color: var(--color-heading);
+	font-family: var(--font-heading);
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+p,
+li,
+label,
+input,
+textarea,
+select,
+button {
+	font-family: var(--font-body);
+}
+
+a {
+	color: var(--color-link);
+	text-decoration-color: rgba(92, 175, 200, 0.5);
+	text-underline-offset: 2px;
+}
+
+a:hover {
+	color: var(--color-link-hover);
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid var(--color-divider);
+}
+
+button,
+input,
+textarea,
+select {
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border);
+	background: rgba(20, 20, 20, 0.72);
+	color: var(--color-text);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+	outline: 2px solid var(--focus-ring-color);
+	outline-offset: 2px;
+}
+
+::selection {
+	background: rgba(192, 161, 119, 0.3);
+	color: var(--accent2-white);
+}

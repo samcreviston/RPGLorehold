@@ -1,0 +1,140 @@
+﻿Project Name
+RPG Content Publisher, Finder, and Builder - “The RPG Lorehold”
+
+Team with Contact information
+Sam Creviston: cre20005@byui.edu, 678-205-7302
+
+
+Project Purpose
+Fun group games that bring people together can oftentimes be hard to begin, and then even more so to maintain. This project is to simplify management of and make more accessible content for tabletop role playing games, such as D&D, and Pathfinder. There is a missing piece to the hobby and group game of easily accessible game content, places for people to share their game content, and a way to prepare/organize that content for an actual game. This website is to provide a platform for publishing, and in turn finding and organizing content for a simpler and easier game experience with friends and family.
+
+Background/Prior Knowledge
+        While I already know Node, Javascript, Typescript, HTML, CSS, MongoDB, and a couple other web development technologies, I want to build this project using React. With the great assistance of AI I have only ever had a couple hours of React experience, so as I would not consider myself experienced, I also  would not say I am a Newbie to it.
+
+        I am quite certain that this is a project that has never been done before. I have looked for such tools, and in terms of an RPG content publishers, I only found four sites besides personal single-publisher sites that even came close, and really only sold physical copies of books or a PDF; whereas my site will have the ability to create and publish interchangeable and sectioned “modules” of adventures in a module creator before publishing, so content can truly be made from scratch, and then users of the site can arrange modules and prepare them for use in their RPG games accessing them in the website rather than a PDF.
+
+        This is an idea I have had ever since the first Intro to Web Development course I took as a freshman. I did make an attempt at it at one point, and though I was able to connect a D&D API successfully, the core features of the site were not achieved, and quite broken, so outside of having before connected a D&D API (a database of items, monsters, NPCs, etc.), and simply having an idea of what I want the site to look like, this is a freshly new project to me!
+
+
+Description
+A React built Website:
+        Core functionalites: Searching content, Creating content, Managing content, AI generated content
+This website is going to be a hub for designing RPG content in a format known as modules, or a small set of adventures intended for a certain level of players. Users will be able to design and publish content with different “section”types, such as text, author notes, notes for the GM (Game Master running the adventure), images, stat blocks, item descriptions, etc. Once created and published, other users can search through the content published by others, view, favorite, and use the modules. Finally, users will be able to manage the content they have saved from their searches, to organize the modules in the order that they would play them, and to be ready to play/host a game.
+
+
+
+
+Main Page
+Intro and the core search feature to search for and filter through published RPG content
+
+Module Creator Page
+This is the core creation functionality. Content creators will be able to:
+* Add and write text blocks, stat blocks, DM notes
+* Add images, art work, maps
+* Add encounter/chance rolls/randomizers
+* Content Module details such as intended player level, settings, specific RPG game compatibility, enemies, bosses, etc.
+* Connect D&D API info to specified text in their module to allow for hovering/clicking and pinning item/character stats/info.
+* Make API calls with an AI module creation assistant
+
+Campaign Manager Page
+This is the core content management functionality. Users are able to save, bookmark, organize, and take progress notes on current modules/adventures for their group. They can also organize the order of modules for a full campaign and add their own notes.
+
+
+Significance
+I have seen the impact of a simple invitation to join an activity. From a hike, to a game, indoor or outdoor, I have witnessed how having something to invite someone to join in has brought together the strongest, most supportive and impactful friendships and groups of my life, and countless others. This is to provide just that - the material and contents/story of tabletop RPG games to always have a setup RPG story ready to invite people to enjoy playing together, and create lasting groups of friends. 
+
+        This is definitely a project I can break up into parts, as outlined in the description, and will be detailed in the Milestones, Tasks, and Schedule section. Additionally, existing code I will be able to see is an already predetermined color/text theme I have chosen for the appearance of the site. After further research I will move onto a more robust and search-supportive D&D API (Open5e). Next, I will use the search-supportive service, meillisearch, for effective content searching stored in a container that indexed data will be saved to from MongoDB as my database, updated via the mongoose library.
+
+        While I have several integrations of libraries, and sections of the site I intend to make, I definitely believe this to be an achievable and completable project, definitely representing a semester’s worth of work. I would be proud of this completed project on my resume, in a job interview, and in representing the college and department.
+
+
+New Computer Science Concepts
+        This project will include learning several new technologies and concepts for me. The first is that of React - I have very minimal experience with React, and have always hoped to better learn it, and would like to apply it here! Furthemore, one of my goals is scalable and efficient searching through the published modules, for which I will learn the concept of data indexing, and efficient searching using indexed data rather than the raw database data. For this I will learn the millisearch library, and host it in Docker, a common industry standard application I have wanted to learn. I will learn a new D&D content API that is more robust and ideal for quickly searching (Open5e) than what I was previously familiar with. Finally, I will learn how to make calls to GPT or Gemini for tailored AI prompts and responses to fit the needs of automatic module content creation based on user prompts and my backend prompts.
+
+
+In summary, I will learn a modern frontend framework, the concept of efficient indexing/searching with ideal libraries and technologies, deepen my familiarity of working with REST APIs, and learn how to connect AI prompts and replies directly into a product.
+
+Beyond the personal interest in the group activity, I personally love web development and want to enter into it for my full-time career. I know this will be a great showpiece of both frontend, backend and AI integration that I want to accomplish. Web development is one of the few things that can keep me up through the night as I lose track of time implementing one more feature, or resolving each error!
+
+
+Milestones, Tasks and Schedule, In Order (135 Total Hours)
+Initial Setup and React Components (20 hours)
+Completion Due: May 14th (Weeks 3-4)
+   1. Setup file structure, outline React components, install dependencies, setup MongoDB and Docker Setup. Familiarize myself with Docker. Create any customized AI agents for specialized tasks (recommending best practices, teaching new technologies, etc.) (5 hours)
+   2. Build base HTML and CSS in React (15 hours)
+   * Studying React implementation/standards
+   * Populate all static elements of all pages/React components
+   * Create the elements/React Components that will be dynamically updated/controlled by functions.
+   * Unify/standardize theme with good CSS and React standards
+
+
+First Core Milestone: Module Creator (33 hours)
+Completion Due:  June 4th (Weeks 4-7)
+   * Module details such as intended player level (int - int range), setting (selection, or other(string)), specific RPG game compatibility (booleans), enemy types (selection, or other(string)), bosses (string), etc.  (5 hours)
+   1. Add/drop/arrange text blocks to structure the module (10 hours)
+   * Add and write text blocks, stat blocks, DM notes
+   * Add images, art work, maps
+   2. Connect Open5e for D&D stats and descriptions (18 hours)
+   * Add a toolbar to select text, and hyperlink/embed that text with the Open5e info needed to call and display the 5e descriptions for items, monsters, etc., right by hovering over or selecting the associated text.
+   * Add ability to “pin” 5e descriptions/stats on right
+   * Update MongoDB with all data
+   * Add encounter/chance rolls/randomizers
+
+
+Second Core Milestone: Module Search (17 hours)
+Completion Due: June 13th(Weeks 7-8)
+   1. Connect and test meillisearch in Docker (5 hours)
+   * Add indexing feature to sync save, update, delete of modules to meillisearch Docker container
+   2. Build Search feature (12 hours)
+   * Study and learn meillisearch library
+   * Implement meillisearch calls for standard search
+   * Add filter, and advanced search
+   * Search parameters include party level, setting, name, etc.
+
+
+Third Core Milestone: Module Manager (25 hours)
+Completion due: June 29th (Weeks 9-11)
+   1. Implement user data and favorite feature to save modules to a general favorites section tied to user (5 hours)
+   * Update MongoDB and connection routes to store user data ( username/password, in progress/published modules, favorited modules, and campaigns (below))
+   2. Implement Campaign organizer (20 hours)
+   * Allow to create, update, rearrange, save a campaign (set of chronological modules)
+   * Update user to have stored multiple campaigns/module lists, with a module-note attribute where the user can add a note tied to each module they have in a campaign
+   * Add “save to [campaign]” feature from searching (stretch/extra)
+
+
+Fourth Core Milestone:  Add AI tool API connection for module generation (30 hours)
+Completion Due: July 15th (Weeks 11-13)
+   1. Use developer accounts to either get an API token for HTTP calls for Gemini or ChatGPT responses. (5 hours)
+   * Learn API, test and confirm initial connection
+   * Configure to lower models and add rate limits
+   2. Create Backend functions that structure a defined and clear instruction file for the AI to follow and reply based on user input (25 hours)
+   * Create steps/phases, standards of excellence, and guidelines for limiting token use
+   * Implement prompt functions for item/settings/stat block/entire module creation
+
+
+Finishing Touches: (10 hours)
+Completion Due: July 21st (Weeks 13-14)
+   1. Add SSO (google) (4 hours)
+   2. Review code to confirm it is beautiful, efficient, and well noted/explained (2 hours)
+   3. Review site with coding peers for visual/layout changes (4 hours)
+   * Implement the visual/layout changes
+
+
+Resources
+GPT for the AI call for content generation support in the Fourth Core Milestone
+
+Dependencies
+        I will build this project on Windows using Visual Studio Code for my IDE. The languages I will need installed are Typescript with React, in a Node.js project. I will test everything while running the project locally, and confirm functionality/test any errors as I push updates to production and as each core functionality is completed.
+
+
+I do not depend on any persons to complete portions, nor do I have any permissions to obtain; I will simply need to add a “not endorsed by Wizards of the Coast” disclaimer in the site footer as though this will all be individually created and contributed content, the base D&D game and most tabletop RPG games are owned by Wizards of the Coast (of which I will not be replicating, quoting, etc.).
+
+This project is reliant upon the following dependencies:
+   * Node.js
+   * Typescript, HTML, CSS
+   * React
+   * Docker for Meillisearch container
+   * Meillisearch service
+   * MongoDB for database
+   * GPT or Gemini API for AI calls
+   * Open5e API for nested D&D stat blocks/descriptions

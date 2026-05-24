@@ -1,0 +1,9 @@
+# Planning note: reduce Docker build context noise during infrastructure phase.
+node_modules
+.git
+coverage
+playwright-report
+test-results
+**/dist
+**/build
+.env

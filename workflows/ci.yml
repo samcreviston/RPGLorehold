@@ -1,0 +1,14 @@
+name: CI
+
+# Planning note: run quality gates for both packages before implementation rollouts.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Planning placeholder
+        run: echo "Replace with install, lint, typecheck, unit tests, and build checks."

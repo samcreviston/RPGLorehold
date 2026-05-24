@@ -1,0 +1,15 @@
+{
+  "planningNote": "Server TypeScript config for strict API and service contracts.",
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node", "jest"]
+  },
+  "ts-node": {
+    "esm": true
+  },
+  "include": ["src", "jest.config.ts"]
+}
