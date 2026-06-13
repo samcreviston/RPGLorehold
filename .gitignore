@@ -13,3 +13,5 @@ seo-lighthouse-copilot-instructions.md
 .env.example
 .env.example
 notes.txt
+scaffold.ps1
+configure-architecture.ps1
