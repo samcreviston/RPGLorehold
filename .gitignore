@@ -1,0 +1,15 @@
+# Planning note: baseline ignores for monorepo package and test outputs.
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.local
+*.log
+copilot-instructions.md
+seo-lighthouse-copilot-instructions.md
+.env.example
+.env.example
+notes.txt

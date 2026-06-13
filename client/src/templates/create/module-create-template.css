@@ -1,0 +1,185 @@
+.module-create-template {
+	gap: var(--space-5);
+}
+
+.module-create-template h3 {
+	font-size: var(--text-lg);
+	margin-bottom: var(--space-3);
+}
+
+.story-content-info,
+.story-content {
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-4);
+	background: rgba(20, 20, 20, 0.42);
+	display: grid;
+	gap: var(--space-4);
+}
+
+.module-create-form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--space-2);
+}
+
+.field-help {
+	font-size: var(--text-sm);
+	color: var(--color-text-muted);
+}
+
+.checkbox-fieldset {
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	padding: var(--space-3);
+	display: grid;
+	gap: var(--space-3);
+}
+
+.checkbox-fieldset legend {
+	padding: 0 var(--space-2);
+	color: var(--color-heading);
+	font-family: var(--font-heading);
+}
+
+.checkbox-chip-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--space-2);
+	max-height: 260px;
+	overflow: auto;
+	padding-right: var(--space-1);
+}
+
+.checkbox-chip-grid--compact {
+	grid-template-columns: repeat(3, minmax(72px, 1fr));
+	max-height: none;
+}
+
+.checkbox-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-sm);
+	border: 1px solid rgba(192, 161, 119, 0.26);
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.adventure-list {
+	display: grid;
+	gap: var(--space-4);
+}
+
+.adventure-card {
+	border: 1px solid rgba(192, 161, 119, 0.3);
+	border-radius: var(--radius-md);
+	padding: var(--space-4);
+	background: rgba(20, 20, 20, 0.58);
+	display: grid;
+	gap: var(--space-3);
+}
+
+.adventure-card-header h4 {
+	font-size: var(--text-lg);
+}
+
+.story-block-list {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.story-block-card {
+	border: 1px solid rgba(245, 245, 245, 0.16);
+	border-radius: var(--radius-sm);
+	padding: var(--space-3);
+	display: grid;
+	gap: var(--space-2);
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.story-block-heading-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.story-block-order-controls {
+	display: inline-flex;
+	gap: var(--space-1);
+}
+
+.story-block-order-controls button {
+	width: 36px;
+	height: 36px;
+	font-size: var(--text-lg);
+	line-height: 1;
+}
+
+.story-block-card textarea {
+	min-height: 128px;
+	resize: vertical;
+}
+
+.story-block-card--dmNote textarea {
+	font-style: italic;
+}
+
+.story-block-card--setting textarea {
+	font-weight: 700;
+}
+
+.upload-placeholder-button {
+	width: 100%;
+	padding: var(--space-4);
+	text-align: center;
+	font-weight: 600;
+	border-style: dashed;
+}
+
+.add-section-card {
+	min-height: 92px;
+	width: 100%;
+	padding: var(--space-3);
+	border-style: dashed;
+	font-size: var(--text-md);
+}
+
+.add-section-card--grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--space-2);
+}
+
+.add-section-card--grid button {
+	min-height: 86px;
+	padding: var(--space-2);
+}
+
+.add-adventure-button {
+	justify-self: start;
+	padding: var(--space-3) var(--space-4);
+}
+
+@media (min-width: 900px) {
+	.module-create-form-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		align-items: start;
+	}
+
+	.module-create-form-grid .field-help {
+		grid-column: span 2;
+		margin-bottom: var(--space-2);
+	}
+}
+
+@media (max-width: 680px) {
+	.checkbox-chip-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.checkbox-chip-grid--compact {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}

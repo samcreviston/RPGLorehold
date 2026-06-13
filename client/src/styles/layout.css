@@ -98,7 +98,7 @@
 }
 
 .page-main {
-	background: rgba(245, 245, 245, 0.86);
+	/* background: rgba(245, 245, 245, 0.86); */
 	color: var(--base-slate-black);
 	border: 1px solid rgba(192, 161, 119, 0.75);
 	border-radius: var(--radius-lg);
