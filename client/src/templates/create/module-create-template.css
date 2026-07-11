@@ -7,6 +7,15 @@
 	margin-bottom: var(--space-3);
 }
 
+
+.module-create-template .story-begins-heading {
+	font-size: clamp(2.8rem, 5.5vw, 4.4rem);
+	line-height: 1.1;
+	margin: calc(var(--space-4) * 2) 0 calc(var(--space-4) * 2.25);
+	text-align: center;
+	letter-spacing: 0.01em;
+}
+
 .story-content-info,
 .story-content {
 	border-top: 4px solid var(--primary-tan);
@@ -76,7 +85,14 @@
 	border-radius: var(--radius-md);
 	padding: var(--space-4);
 	display: grid;
-	gap: var(--space-3);
+	gap: calc(var(--space-3) / 2);
+}
+
+.module-create-template input,
+.module-create-template textarea,
+.module-create-template select {
+	background: transparent;
+	border: 1px solid rgba(192, 161, 119, 0.3);
 }
 
 .adventure-card-header h4 {
@@ -88,12 +104,17 @@
 	gap: var(--space-3);
 }
 
+.story-block-flow-item {
+	display: grid;
+	gap: calc(var(--space-2) / 2);
+}
+
 .story-block-card {
 	border: 1px solid rgba(245, 245, 245, 0.16);
 	border-radius: var(--radius-sm);
 	padding: var(--space-3);
 	display: grid;
-	gap: var(--space-2);
+	gap: calc(var(--space-2) / 2);
 }
 
 .story-block-heading-row {
@@ -109,9 +130,9 @@
 }
 
 .story-block-order-controls button {
-	width: 36px;
-	height: 36px;
-	font-size: var(--text-lg);
+	width: 30px;
+	height: 30px;
+	font-size: var(--text-md);
 	line-height: 1;
 }
 
@@ -136,28 +157,33 @@
 	border-style: dashed;
 }
 
-.add-section-card {
-	min-height: 92px;
-	width: 100%;
-	padding: var(--space-3);
+.add-card-button {
+	min-height: 44px;
+	justify-self: start;
+	padding: var(--space-1) var(--space-3);
+	width: fit-content;
 	border-style: dashed;
-	font-size: var(--text-md);
+	font-size: var(--text-sm);
+	font-weight: 600;
 }
 
-.add-section-card--grid {
+.add-section-card {
+	justify-self: start;
+}
+
+.add-section-card-options {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: var(--space-2);
 }
 
-.add-section-card--grid button {
-	min-height: 86px;
-	padding: var(--space-2);
+.add-section-card-options--inline {
+	align-items: stretch;
 }
 
-.add-adventure-button {
-	justify-self: start;
-	padding: var(--space-3) var(--space-4);
+.add-section-card-options .add-card-button {
+	justify-self: stretch;
+	width: 100%;
 }
 
 @media (min-width: 900px) {
@@ -179,5 +205,9 @@
 
 	.checkbox-chip-grid--compact {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.add-section-card-options {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }

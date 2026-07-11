@@ -13,7 +13,6 @@ type AdventureSection = {
 	id: string;
 	title: string;
 	blocks: StoryBlock[];
-	isAddMenuOpen: boolean;
 };
 
 const playstyleOptions = ['More Roleplay', 'Balanced', 'More Combat'] as const;
@@ -95,6 +94,10 @@ function ModuleCreateTemplate() {
 	const [playstyle, setPlaystyle] = useState<(typeof playstyleOptions)[number]>('Balanced');
 	const [selectedAlignments, setSelectedAlignments] = useState<string[]>([]);
 	const [selectedBiomes, setSelectedBiomes] = useState<string[]>([]);
+	const [inlineAddSectionMenu, setInlineAddSectionMenu] = useState<{
+		adventureId: string;
+		afterBlockId: string;
+	} | null>(null);
 	const [adventures, setAdventures] = useState<AdventureSection[]>(() => [
 		createAdventureSection(() => nextId(idCounterRef), 1)
 	]);
@@ -136,28 +139,29 @@ function ModuleCreateTemplate() {
 		);
 	};
 
-	const setAddCardMenuOpen = (adventureId: string, isOpen: boolean) => {
-		setAdventures((previousAdventures) =>
-			previousAdventures.map((adventure) =>
-				adventure.id === adventureId ? { ...adventure, isAddMenuOpen: isOpen } : adventure
-			)
-		);
-	};
-
-	const addBlockToAdventure = (adventureId: string, blockType: StoryBlockType) => {
+	const addBlockToAdventure = (adventureId: string, blockType: StoryBlockType, insertAtIndex?: number) => {
 		setAdventures((previousAdventures) =>
 			previousAdventures.map((adventure) => {
 				if (adventure.id !== adventureId) {
 					return adventure;
 				}
 
+				const nextBlock = { id: nextId(idCounterRef), type: blockType, content: '' };
+				const nextBlocks = [...adventure.blocks];
+
+				if (
+					typeof insertAtIndex === 'number' &&
+					insertAtIndex >= 0 &&
+					insertAtIndex <= nextBlocks.length
+				) {
+					nextBlocks.splice(insertAtIndex, 0, nextBlock);
+				} else {
+					nextBlocks.push(nextBlock);
+				}
+
 				return {
 					...adventure,
-					isAddMenuOpen: false,
-					blocks: [
-						...adventure.blocks,
-						{ id: nextId(idCounterRef), type: blockType, content: '' }
-					]
+					blocks: nextBlocks
 				};
 			})
 		);
@@ -208,6 +212,28 @@ function ModuleCreateTemplate() {
 				};
 			})
 		);
+	};
+
+	const toggleInlineAddSectionMenu = (adventureId: string, afterBlockId: string) => {
+		setInlineAddSectionMenu((previousMenu) => {
+			if (
+				previousMenu?.adventureId === adventureId &&
+				previousMenu.afterBlockId === afterBlockId
+			) {
+				return null;
+			}
+
+			return { adventureId, afterBlockId };
+		});
+	};
+
+	const addInlineBlockToAdventure = (
+		adventureId: string,
+		blockType: StoryBlockType,
+		insertAtIndex: number
+	) => {
+		addBlockToAdventure(adventureId, blockType, insertAtIndex);
+		setInlineAddSectionMenu(null);
 	};
 
 	const toggleSelection = (value: string, selectedValues: string[], onChange: (values: string[]) => void) => {
@@ -352,16 +378,14 @@ function ModuleCreateTemplate() {
 				</fieldset>
 			</section>
 
+			<h3 className="story-begins-heading">Where the Story Begins!</h3>
+
 			<section className="story-content" aria-label="Story content">
 				<h3>Story Content</h3>
 				<div className="adventure-list">
-					{adventures.map((adventure, adventureIndex) => (
+					{adventures.map((adventure) => (
 						<article key={adventure.id} className="adventure-card">
-							<header className="adventure-card-header">
-								<h4>Adventure {adventureIndex + 1}</h4>
-							</header>
-
-							<label htmlFor={`adventure-title-${adventure.id}`}>Adventure Title</label>
+							<label htmlFor={`adventure-title-${adventure.id}`}>(Adventure Title)</label>
 							<input
 								id={`adventure-title-${adventure.id}`}
 								type="text"
@@ -372,77 +396,131 @@ function ModuleCreateTemplate() {
 
 							<div className="story-block-list">
 								{adventure.blocks.map((block, blockIndex) => (
-									<section key={block.id} className={`story-block-card story-block-card--${block.type}`}>
-										<div className="story-block-heading-row">
-											<h5>{blockTypeLabelMap[block.type]}</h5>
-											<div className="story-block-order-controls" aria-label="Reorder block">
-												<button
-													type="button"
-													onClick={() => moveBlock(adventure.id, blockIndex, -1)}
-													disabled={blockIndex === 0}
-													aria-label={`Move ${blockTypeLabelMap[block.type]} up`}
-												>
-													↑
-												</button>
-												<button
-													type="button"
-													onClick={() => moveBlock(adventure.id, blockIndex, 1)}
-													disabled={blockIndex === adventure.blocks.length - 1}
-													aria-label={`Move ${blockTypeLabelMap[block.type]} down`}
-												>
-													↓
-												</button>
+									<div key={block.id} className="story-block-flow-item">
+										<section className={`story-block-card story-block-card--${block.type}`}>
+											<div className="story-block-heading-row">
+												<h5>({blockTypeLabelMap[block.type]})</h5>
+												<div className="story-block-order-controls" aria-label="Reorder block">
+													<button
+														type="button"
+														onClick={() => moveBlock(adventure.id, blockIndex, -1)}
+														disabled={blockIndex === 0}
+														aria-label={`Move ${blockTypeLabelMap[block.type]} up`}
+													>
+														↑
+													</button>
+													<button
+														type="button"
+														onClick={() => moveBlock(adventure.id, blockIndex, 1)}
+														disabled={blockIndex === adventure.blocks.length - 1}
+														aria-label={`Move ${blockTypeLabelMap[block.type]} down`}
+													>
+														↓
+													</button>
+												</div>
 											</div>
-										</div>
 
-										{block.type === 'imageMap' ? (
-											<button type="button" className="upload-placeholder-button">
-												Upload a file (.jpeg, .png, .pdf)
-											</button>
-										) : (
-											<textarea
-												value={block.content}
-												onChange={(event) =>
-													updateBlockContent(adventure.id, block.id, event.target.value)
-												}
-												placeholder={`Enter ${blockTypeLabelMap[block.type]} content`}
-												rows={6}
-											/>
-										)}
-									</section>
+											{block.type === 'imageMap' ? (
+												<button type="button" className="upload-placeholder-button">
+													Upload a file (.jpeg, .png, .pdf)
+												</button>
+											) : (
+												<textarea
+													value={block.content}
+													onChange={(event) =>
+														updateBlockContent(adventure.id, block.id, event.target.value)
+													}
+													placeholder={`Enter ${blockTypeLabelMap[block.type]} content`}
+													rows={6}
+												/>
+											)}
+										</section>
+
+										{blockIndex < adventure.blocks.length - 1 ? (
+											inlineAddSectionMenu?.adventureId === adventure.id &&
+											inlineAddSectionMenu.afterBlockId === block.id ? (
+												<section className="add-section-card-options add-section-card-options--inline" aria-label="Choose section type">
+													<button
+														type="button"
+														className="add-card-button"
+														onClick={() => addInlineBlockToAdventure(adventure.id, 'story', blockIndex + 1)}
+													>
+														+ Story Text
+													</button>
+													<button
+														type="button"
+														className="add-card-button"
+														onClick={() => addInlineBlockToAdventure(adventure.id, 'dmNote', blockIndex + 1)}
+													>
+														+ DM Note
+													</button>
+													<button
+														type="button"
+														className="add-card-button"
+														onClick={() =>
+															addInlineBlockToAdventure(adventure.id, 'setting', blockIndex + 1)
+														}
+													>
+														+ Setting Description
+													</button>
+													<button
+														type="button"
+														className="add-card-button"
+														onClick={() => addInlineBlockToAdventure(adventure.id, 'imageMap', blockIndex + 1)}
+													>
+														+ Image/Map
+													</button>
+												</section>
+											) : (
+												<button
+													type="button"
+													className="add-card-button add-section-card"
+													onClick={() => toggleInlineAddSectionMenu(adventure.id, block.id)}
+												>
+													+ Section Card
+												</button>
+											)
+										) : null}
+									</div>
 								))}
 
-								{adventure.isAddMenuOpen ? (
-									<section className="add-section-card add-section-card--grid" aria-label="Choose section type">
-										<button type="button" onClick={() => addBlockToAdventure(adventure.id, 'story')}>
-											Add Story Text
-										</button>
-										<button type="button" onClick={() => addBlockToAdventure(adventure.id, 'dmNote')}>
-											Add DM Note
-										</button>
-										<button type="button" onClick={() => addBlockToAdventure(adventure.id, 'setting')}>
-											Add Setting Description
-										</button>
-										<button type="button" onClick={() => addBlockToAdventure(adventure.id, 'imageMap')}>
-											Add Image/Map
-										</button>
-									</section>
-								) : (
+								<section className="add-section-card-options" aria-label="Choose section type">
 									<button
 										type="button"
-										className="add-section-card"
-										onClick={() => setAddCardMenuOpen(adventure.id, true)}
+										className="add-card-button"
+										onClick={() => addBlockToAdventure(adventure.id, 'story')}
 									>
-										Add Section Card
+										+ Story Text
 									</button>
-								)}
+									<button
+										type="button"
+										className="add-card-button"
+										onClick={() => addBlockToAdventure(adventure.id, 'dmNote')}
+									>
+										+ DM Note
+									</button>
+									<button
+										type="button"
+										className="add-card-button"
+										onClick={() => addBlockToAdventure(adventure.id, 'setting')}
+									>
+										+ Setting Description
+									</button>
+									<button
+										type="button"
+										className="add-card-button"
+										onClick={() => addBlockToAdventure(adventure.id, 'imageMap')}
+									>
+										+ Image/Map
+									</button>
+								</section>
 							</div>
 						</article>
 					))}
 				</div>
 
-				<button type="button" className="add-adventure-button" onClick={addAdventure}>
-					Add Another Adventure Card
+				<button type="button" className="add-card-button add-adventure-button" onClick={addAdventure}>
+					+ Adventure Card
 				</button>
 			</section>
 		</section>
@@ -459,8 +537,7 @@ function createAdventureSection(nextIdFactory: () => string, position: number): 
 				type: 'setting',
 				content: ''
 			}
-		],
-		isAddMenuOpen: false
+		]
 	};
 }
 
