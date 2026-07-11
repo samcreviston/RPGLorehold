@@ -9,10 +9,10 @@
 
 .story-content-info,
 .story-content {
-	border: 1px solid var(--color-border);
+	border-top: 4px solid var(--primary-tan);
+	border-bottom: 4px solid var(--primary-tan);
 	border-radius: var(--radius-md);
 	padding: var(--space-4);
-	background: rgba(20, 20, 20, 0.42);
 	display: grid;
 	gap: var(--space-4);
 }
@@ -75,7 +75,6 @@
 	border: 1px solid rgba(192, 161, 119, 0.3);
 	border-radius: var(--radius-md);
 	padding: var(--space-4);
-	background: rgba(20, 20, 20, 0.58);
 	display: grid;
 	gap: var(--space-3);
 }
@@ -95,7 +94,6 @@
 	padding: var(--space-3);
 	display: grid;
 	gap: var(--space-2);
-	background: rgba(255, 255, 255, 0.03);
 }
 
 .story-block-heading-row {
