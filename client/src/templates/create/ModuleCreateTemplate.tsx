@@ -87,17 +87,19 @@ const blockTypeLabelMap: Record<StoryBlockType, string> = {
 
 const contentTypeFilters = [
 	'all',
-	'spells',
-	'monsters',
-	'backgrounds',
-	'planes',
-	'feats',
-	'races',
-	'classes',
+	'creatures',
+	'items',
 	'magic items',
 	'weapons',
 	'armor',
-	'equipment'
+	'conditions',
+	'spells',
+	'spell schools',
+	'classes',
+	'environments',
+	'abilities',
+	'skills',
+	'services'
 ] as const;
 
 type ContentTypeFilter = (typeof contentTypeFilters)[number];
@@ -128,18 +130,10 @@ const contentManagerMockCatalog: ContentManagerResult[] = [
 	{
 		id: 'monster-young-red-dragon',
 		title: 'Young Red Dragon',
-		type: 'monsters',
+		type: 'creatures',
 		summary: 'Large dragon with high mobility, fire breath, and fear presence.',
 		detail:
 			'Size/Type: Large dragon\nArmor Class: 18\nHit Points: 178 (17d10 + 85)\nSpeed: 40 ft., climb 40 ft., fly 80 ft.\n\nSTR 23, DEX 10, CON 21, INT 14, WIS 11, CHA 19\n\nActions include Multiattack and Fire Breath (Recharge 5-6), making it a deadly solo encounter for mid-level parties.'
-	},
-	{
-		id: 'background-sage',
-		title: 'Sage',
-		type: 'backgrounds',
-		summary: 'Academic background focused on lore, research, and libraries.',
-		detail:
-			'Skill Proficiencies: Arcana, History\nLanguages: Two of your choice\nEquipment: Bottle of black ink, quill, small knife, letter from a dead colleague, common clothes, pouch with 10 gp\nFeature: Researcher - you often know where and from whom you can obtain lore.'
 	},
 	{
 		id: 'magic-item-bag-of-holding',
@@ -168,9 +162,7 @@ function ModuleCreateTemplate() {
 	const [playstyle, setPlaystyle] = useState<(typeof playstyleOptions)[number]>('Balanced');
 	const [selectedAlignments, setSelectedAlignments] = useState<string[]>([]);
 	const [selectedBiomes, setSelectedBiomes] = useState<string[]>([]);
-	const [selectedContentFilters, setSelectedContentFilters] = useState<ContentTypeFilter[]>([
-		...contentTypeFilters
-	]);
+	const [selectedContentFilter, setSelectedContentFilter] = useState<ContentTypeFilter>('all');
 	const [contentSearchInput, setContentSearchInput] = useState('');
 	const [activeContentQuery, setActiveContentQuery] = useState('');
 	const [contentViewMode, setContentViewMode] = useState<'results' | 'detail'>('results');
@@ -335,39 +327,10 @@ function ModuleCreateTemplate() {
 		onChange([...selectedValues, value]);
 	};
 
-	const toggleContentFilter = (filter: ContentTypeFilter) => {
-		setSelectedContentFilters((previousFilters) => {
-			if (filter === 'all') {
-				if (previousFilters.includes('all')) {
-					return [];
-				}
-				return [...contentTypeFilters];
-			}
-
-			if (previousFilters.includes('all')) {
-				return [filter];
-			}
-
-			if (previousFilters.includes(filter)) {
-				return previousFilters.filter((existingFilter) => existingFilter !== filter);
-			}
-
-			const nextFilters = [...previousFilters, filter];
-			const allNonAllFiltersSelected = contentTypeFilters
-				.filter((contentTypeFilter) => contentTypeFilter !== 'all')
-				.every((contentTypeFilter) => nextFilters.includes(contentTypeFilter));
-
-			if (allNonAllFiltersSelected) {
-				return [...contentTypeFilters];
-			}
-
-			return nextFilters;
-		});
-	};
-
-	const visibleContentTypes = selectedContentFilters.includes('all')
-		? contentTypeFilters.filter((contentTypeFilter) => contentTypeFilter !== 'all')
-		: selectedContentFilters;
+	const visibleContentTypes =
+		selectedContentFilter === 'all'
+			? contentTypeFilters.filter((contentTypeFilter) => contentTypeFilter !== 'all')
+			: [selectedContentFilter];
 
 	const contentManagerResults = useMemo(() => {
 		const normalizedQuery = activeContentQuery.trim().toLowerCase();
@@ -454,15 +417,15 @@ function ModuleCreateTemplate() {
 
 								<div className="content-filter-row" aria-label="5e content filters">
 									{contentTypeFilters.map((filter) => {
-										const isSelected = selectedContentFilters.includes(filter);
+										const isSelected = selectedContentFilter === filter;
 										return (
 											<button
 												key={filter}
 												type="button"
 												className={`content-filter-chip ${isSelected ? 'content-filter-chip--selected' : ''}`}
-												onClick={() => toggleContentFilter(filter)}
+												onClick={() => setSelectedContentFilter(filter)}
 											>
-												{filter === 'all' ? 'All' : filter}
+												{filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
 											</button>
 										);
 									})}
