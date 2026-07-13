@@ -7,7 +7,7 @@
 .site-layout__content,
 .site-main {
 	flex: 1;
-	width: min(1100px, 94vw);
+	width: min(1400px, 94vw);
 	margin: 0 auto;
 	padding: var(--space-6) 0 var(--space-10);
 }
@@ -20,7 +20,7 @@
 }
 
 .site-header__top {
-	width: min(1100px, 94vw);
+	width: min(1400px, 94vw);
 	margin: 0 auto;
 	padding: var(--space-4) 0;
 	display: flex;
@@ -52,7 +52,7 @@
 }
 
 .site-nav {
-	width: min(1100px, 94vw);
+	width: min(1400px, 94vw);
 	margin: 0 auto;
 	padding-bottom: var(--space-3);
 }

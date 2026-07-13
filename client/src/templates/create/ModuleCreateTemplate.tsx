@@ -1,6 +1,9 @@
 import { useEffect, useEffectEvent, useRef, useState, type MutableRefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
+import CreatureStatBlock from '../../components/content/CreatureStatBlock';
+import type { MappedCreatureStatblock, Open5eCreature } from '../../lib/open5e/creatureTypes';
+import { mapOpen5eCreatureToStatblock } from '../../lib/open5e/mapOpen5eCreatureToStatblock';
 import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
 import './module-create-template.css';
 
@@ -132,7 +135,16 @@ const open5eEndpointByFilter: Record<Exclude<ContentTypeFilter, 'all'>, string> 
 type ContentManagerResult = {
 	id: string;
 	name: string;
+	slug?: string;
+	objectModel?: string;
+	detailPath?: string;
 };
+
+function isCreatureResult(result: ContentManagerResult): boolean {
+	const model = result.objectModel?.toLowerCase() ?? '';
+	const path = result.detailPath?.toLowerCase() ?? '';
+	return model === 'creature' || path.includes('creatures');
+}
 
 type ChatMessage = {
 	id: string;
@@ -160,6 +172,9 @@ function ModuleCreateTemplate() {
 	const [contentResultCount, setContentResultCount] = useState(0);
 	const [contentViewMode, setContentViewMode] = useState<'results' | 'detail'>('results');
 	const [selectedContentResult, setSelectedContentResult] = useState<ContentManagerResult | null>(null);
+	const [creatureStatblock, setCreatureStatblock] = useState<MappedCreatureStatblock | null>(null);
+	const [creatureDetailStatus, setCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+	const [creatureDetailError, setCreatureDetailError] = useState('');
 	const [chatDraft, setChatDraft] = useState('');
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
 		{
@@ -524,15 +539,47 @@ function ModuleCreateTemplate() {
 				console.log(data);
 
 				const results = (data.results ?? []).map(
-					(entry: { key?: string; object_pk?: string; name?: string; object_name?: string }, index: number) => ({
-						id: entry.key ?? entry.object_pk ?? String(index),
-						name: entry.name ?? entry.object_name ?? 'Unknown'
-					})
+					(
+						entry: {
+							key?: string;
+							object_pk?: string;
+							slug?: string;
+							name?: string;
+							object_name?: string;
+							object_model?: string;
+							route?: string;
+						},
+						index: number
+					) => {
+						const slugOrKey = entry.slug ?? entry.object_pk ?? entry.key ?? String(index);
+						const route = entry.route?.replace(/^v2\//, '') ?? '';
+						const inferredCreature =
+							selectedContentFilter === 'creatures' ||
+							entry.object_model?.toLowerCase() === 'creature' ||
+							route.includes('creatures');
+
+						return {
+							id: slugOrKey,
+							name: entry.name ?? entry.object_name ?? 'Unknown',
+							slug: slugOrKey,
+							objectModel:
+								entry.object_model ??
+								(selectedContentFilter === 'creatures' ? 'Creature' : undefined),
+							detailPath: inferredCreature
+								? `creatures/${slugOrKey}/`
+								: route
+									? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
+									: undefined
+						};
+					}
 				);
 
 				setContentSearchResults(results);
 				setContentResultCount(typeof data.count === 'number' ? data.count : results.length);
 				setSelectedContentResult(null);
+				setCreatureStatblock(null);
+				setCreatureDetailStatus('idle');
+				setCreatureDetailError('');
 				setContentViewMode('results');
 			} catch (error) {
 				if ((error as Error).name === 'AbortError') {
@@ -553,11 +600,40 @@ function ModuleCreateTemplate() {
 	const openContentDetail = (result: ContentManagerResult) => {
 		setSelectedContentResult(result);
 		setContentViewMode('detail');
+		setCreatureStatblock(null);
+		setCreatureDetailError('');
+
+		if (!isCreatureResult(result)) {
+			setCreatureDetailStatus('idle');
+			return;
+		}
+
+		const detailPath = result.detailPath ?? `creatures/${result.slug ?? result.id}/`;
+		setCreatureDetailStatus('loading');
+
+		void (async () => {
+			try {
+				const response = await fetch(`/open5e-api/${detailPath}`);
+				if (!response.ok) {
+					throw new Error(`Failed to load creature (${response.status})`);
+				}
+				const data = (await response.json()) as Open5eCreature;
+				setCreatureStatblock(mapOpen5eCreatureToStatblock(data));
+				setCreatureDetailStatus('idle');
+			} catch (error) {
+				console.error(error);
+				setCreatureDetailStatus('error');
+				setCreatureDetailError(error instanceof Error ? error.message : 'Failed to load creature.');
+			}
+		})();
 	};
 
 	const returnToContentResults = () => {
 		setContentViewMode('results');
 		setSelectedContentResult(null);
+		setCreatureStatblock(null);
+		setCreatureDetailStatus('idle');
+		setCreatureDetailError('');
 	};
 
 	const sendChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
@@ -651,7 +727,19 @@ function ModuleCreateTemplate() {
 													connect to text
 												</button>
 											</div>
-											<h5>{selectedContentResult.name}</h5>
+											{selectedContentResult && isCreatureResult(selectedContentResult) ? (
+												creatureDetailStatus === 'loading' ? (
+													<p className="content-results-empty">Loading stat block…</p>
+												) : creatureDetailStatus === 'error' ? (
+													<p className="content-results-empty">{creatureDetailError}</p>
+												) : creatureStatblock ? (
+													<CreatureStatBlock creature={creatureStatblock} />
+												) : (
+													<h5>{selectedContentResult.name}</h5>
+												)
+											) : (
+												<h5>{selectedContentResult.name}</h5>
+											)}
 										</div>
 									) : (
 										<div className="content-results-list" role="list">

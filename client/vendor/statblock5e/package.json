@@ -1,0 +1,8 @@
+{
+  "name": "statblock5e",
+  "version": "0.0.4",
+  "private": true,
+  "description": "Vendored Valloric/statblock5e web components (Apache-2.0). Upstream is not published to npm.",
+  "type": "module",
+  "license": "Apache-2.0"
+}
