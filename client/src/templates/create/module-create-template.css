@@ -114,6 +114,22 @@
 	background: rgba(140, 140, 140, 0.2);
 	color: var(--base-slate-black);
 	font-size: var(--text-sm);
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.content-manager-helper--attention {
+	background: var(--accent1-red-rgba);
+	color: var(--base-slate-black);
+	animation: content-manager-helper-flash 0.55s ease-out;
+}
+
+@keyframes content-manager-helper-flash {
+	0% {
+		background: rgba(183, 24, 21, 0.85);
+	}
+	100% {
+		background: var(--accent1-red-rgba);
+	}
 }
 
 .content-filter-row {
@@ -221,8 +237,13 @@
 	color: var(--accent2-white);
 }
 
-.content-connect-button:disabled {
+.content-connect-button:disabled,
+.content-connect-button--awaiting-link {
 	opacity: 0.45;
+	cursor: pointer;
+}
+
+.content-connect-button:disabled {
 	cursor: not-allowed;
 }
 
@@ -416,6 +437,13 @@
 	padding: var(--space-4);
 	display: grid;
 	gap: calc(var(--space-3) / 2);
+}
+
+.adventure-title-input {
+	font-size: var(--text-xl);
+	font-weight: 600;
+	line-height: 1.35;
+	padding: 0.55rem 0.7rem;
 }
 
 .module-create-template input,

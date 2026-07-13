@@ -7,6 +7,7 @@ import {
 	useState,
 	type ReactNode
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
 	changeAccountPassword,
 	fetchCurrentUser,
@@ -17,6 +18,7 @@ import {
 	updateAccountProfile,
 	type AuthUser
 } from '../api/auth';
+import { registerSessionHandlers } from '../api/http';
 
 type AuthContextValue = {
 	user: AuthUser | null;
@@ -33,6 +35,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+	const navigate = useNavigate();
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
@@ -46,6 +49,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			return false;
 		}
 	}, []);
+
+	const handleSessionExpired = useCallback(
+		(fromPath?: string) => {
+			setUser(null);
+			const currentPath = fromPath?.split('?')[0] || window.location.pathname;
+			if (currentPath === '/account') {
+				return;
+			}
+
+			const requiresSignIn =
+				currentPath === '/creator' ||
+				currentPath.startsWith('/creator/') ||
+				currentPath === '/dm-home' ||
+				currentPath.startsWith('/dm-home/');
+
+			if (!requiresSignIn) {
+				return;
+			}
+
+			navigate('/account', {
+				replace: true,
+				state: { from: fromPath && !fromPath.startsWith('/account') ? fromPath : currentPath }
+			});
+		},
+		[navigate]
+	);
+
+	useEffect(() => {
+		registerSessionHandlers({
+			refreshAccess: refresh,
+			handleSessionExpired
+		});
+		return () => {
+			registerSessionHandlers(null);
+		};
+	}, [refresh, handleSessionExpired]);
 
 	useEffect(() => {
 		let cancelled = false;

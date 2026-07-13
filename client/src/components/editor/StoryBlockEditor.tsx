@@ -35,6 +35,7 @@ type StoryBlockEditorProps = {
 	onContentChange: (html: string) => void;
 	onRequestLinkContent: (pending: PendingContentLink) => void;
 	onOpenContentLink: (href: string, contentKey?: string) => void;
+	onTextHighlighted?: () => void;
 };
 
 function normalizeEditorHtml(value: string): string {
@@ -51,7 +52,8 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 			blockId,
 			onContentChange,
 			onRequestLinkContent,
-			onOpenContentLink
+			onOpenContentLink,
+			onTextHighlighted
 		},
 		ref
 	) {
@@ -59,6 +61,8 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 		const lastEmittedHtmlRef = useRef(normalizeEditorHtml(content));
 		const onOpenContentLinkRef = useRef(onOpenContentLink);
 		onOpenContentLinkRef.current = onOpenContentLink;
+		const onTextHighlightedRef = useRef(onTextHighlighted);
+		onTextHighlightedRef.current = onTextHighlighted;
 
 		const editor = useEditor({
 			extensions: [
@@ -89,7 +93,11 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 			onSelectionUpdate: ({ editor: currentEditor }) => {
 				const { empty, from, to } = currentEditor.state.selection;
 				const selectedText = currentEditor.state.doc.textBetween(from, to, ' ');
-				setHasTextSelection(!empty && selectedText.trim().length > 0);
+				const hasSelection = !empty && selectedText.trim().length > 0;
+				setHasTextSelection(hasSelection);
+				if (hasSelection) {
+					onTextHighlightedRef.current?.();
+				}
 			}
 		});
 

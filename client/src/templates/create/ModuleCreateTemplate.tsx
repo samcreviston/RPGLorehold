@@ -268,6 +268,8 @@ function ModuleCreateTemplate() {
 	const [contentWindowDetail, setContentWindowDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [contentWindowError, setContentWindowError] = useState('');
 	const [contentConnectError, setContentConnectError] = useState('');
+	const [showLinkContentHint, setShowLinkContentHint] = useState(false);
+	const [linkContentHintFlashKey, setLinkContentHintFlashKey] = useState(0);
 	const [nonCreatureDetail, setNonCreatureDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [nonCreatureDetailStatus, setNonCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 	const [nonCreatureDetailError, setNonCreatureDetailError] = useState('');
@@ -282,7 +284,7 @@ function ModuleCreateTemplate() {
 	const [isSidebarToolsOpen, setIsSidebarToolsOpen] = useState(false);
 	const [isStoryContentInfoOpen, setIsStoryContentInfoOpen] = useState(true);
 	const [isContentManagerOpen, setIsContentManagerOpen] = useState(true);
-	const [isContentWindowOpen, setIsContentWindowOpen] = useState(true);
+	const [isContentWindowOpen, setIsContentWindowOpen] = useState(false);
 	const [isLairChatOpen, setIsLairChatOpen] = useState(true);
 	const [inlineAddSectionMenu, setInlineAddSectionMenu] = useState<{
 		adventureId: string;
@@ -821,6 +823,7 @@ function ModuleCreateTemplate() {
 
 	const requestLinkContent = (pending: PendingContentLink) => {
 		setPendingContentLink(pending);
+		setShowLinkContentHint(false);
 		setIsSidebarToolsOpen(true);
 		window.requestAnimationFrame(() => {
 			const input = contentSearchInputRef.current;
@@ -1032,8 +1035,11 @@ function ModuleCreateTemplate() {
 								</div>
 								{isContentManagerOpen ? (
 									<>
-								<p className="content-manager-helper">
-									highlight text in your story or dm note to attach D&amp;D content!
+								<p
+									key={linkContentHintFlashKey}
+									className={`content-manager-helper${showLinkContentHint ? ' content-manager-helper--attention' : ''}`}
+								>
+									To attach 5e content, highlight text in your story, then click Link Content.
 								</p>
 
 								<div className="content-filter-row" aria-label="5e content filters">
@@ -1080,14 +1086,33 @@ function ModuleCreateTemplate() {
 												</button>
 												<button
 													type="button"
-													className="content-connect-button"
-													onClick={connectSelectedContentToText}
-													disabled={
+													className={`content-connect-button${
+														!pendingContentLink ? ' content-connect-button--awaiting-link' : ''
+													}`}
+													aria-disabled={
 														!pendingContentLink ||
-														!selectedContentResult ||
 														(isCreatureResult(selectedContentResult) &&
 															creatureDetailStatus === 'loading')
 													}
+													disabled={
+														Boolean(pendingContentLink) &&
+														isCreatureResult(selectedContentResult) &&
+														creatureDetailStatus === 'loading'
+													}
+													onClick={() => {
+														if (!pendingContentLink) {
+															setShowLinkContentHint(true);
+															setLinkContentHintFlashKey((key) => key + 1);
+															return;
+														}
+														if (
+															isCreatureResult(selectedContentResult) &&
+															creatureDetailStatus === 'loading'
+														) {
+															return;
+														}
+														connectSelectedContentToText();
+													}}
 												>
 													connect to text
 												</button>
@@ -1389,6 +1414,7 @@ function ModuleCreateTemplate() {
 							<label htmlFor={`adventure-title-${adventure.id}`}>(Adventure Title)</label>
 							<input
 								id={`adventure-title-${adventure.id}`}
+								className="adventure-title-input"
 								type="text"
 								value={adventure.title}
 								onChange={(event) => updateAdventureTitle(adventure.id, event.target.value)}
@@ -1439,6 +1465,7 @@ function ModuleCreateTemplate() {
 													}
 													onRequestLinkContent={requestLinkContent}
 													onOpenContentLink={openContentLinkInWindow}
+													onTextHighlighted={() => setShowLinkContentHint(false)}
 												/>
 											)}
 										</section>
