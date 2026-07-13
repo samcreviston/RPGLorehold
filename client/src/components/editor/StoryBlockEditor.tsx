@@ -79,6 +79,8 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 				})
 			],
 			content: normalizeEditorHtml(content),
+			immediatelyRender: false,
+			shouldRerenderOnTransaction: false,
 			editorProps: {
 				attributes: {
 					class: 'story-block-editor__content',
@@ -88,16 +90,20 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 			onUpdate: ({ editor: currentEditor }) => {
 				const html = currentEditor.getHTML();
 				lastEmittedHtmlRef.current = html;
-				onContentChange(html);
+				queueMicrotask(() => {
+					onContentChange(html);
+				});
 			},
 			onSelectionUpdate: ({ editor: currentEditor }) => {
 				const { empty, from, to } = currentEditor.state.selection;
 				const selectedText = currentEditor.state.doc.textBetween(from, to, ' ');
 				const hasSelection = !empty && selectedText.trim().length > 0;
-				setHasTextSelection(hasSelection);
-				if (hasSelection) {
-					onTextHighlightedRef.current?.();
-				}
+				queueMicrotask(() => {
+					setHasTextSelection(hasSelection);
+					if (hasSelection) {
+						onTextHighlightedRef.current?.();
+					}
+				});
 			}
 		});
 
@@ -140,7 +146,9 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 			}
 
 			lastEmittedHtmlRef.current = next;
-			editor.commands.setContent(next, false);
+			queueMicrotask(() => {
+				editor.commands.setContent(next, false);
+			});
 		}, [content, editor]);
 
 		const handleLinkContent = () => {
