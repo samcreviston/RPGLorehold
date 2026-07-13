@@ -1,6 +1,11 @@
-﻿/*
-Planning note:
-- Responsibility: userTypes module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿export type AuthUser = {
+	id: string;
+	email: string;
+	username: string;
+	role: 'user' | 'admin';
+};
+
+export type JwtAccessPayload = {
+	sub: string;
+	role: 'user' | 'admin';
+};

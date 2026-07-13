@@ -1,0 +1,135 @@
+.account-page {
+	display: grid;
+	gap: var(--space-4);
+	color: var(--base-slate-black);
+	max-width: 640px;
+}
+
+.account-page--guest {
+	max-width: none;
+	justify-items: center;
+	align-content: start;
+	text-align: left;
+}
+
+.account-guest-panel {
+	width: min(100%, 520px);
+	display: grid;
+	gap: var(--space-4);
+	justify-items: stretch;
+}
+
+.account-page h1,
+.account-page h2,
+.account-page p,
+.account-page label,
+.account-page strong {
+	color: var(--base-slate-black);
+}
+
+.account-lede {
+	margin: 0;
+	line-height: 1.5;
+}
+
+.account-mode-swap {
+	margin: var(--space-2) 0 0;
+	font-size: var(--text-sm);
+	color: rgba(20, 20, 20, 0.82);
+}
+
+.account-mode-link {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--primary-purple);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.account-mode-link:hover {
+	color: #3a1849;
+}
+
+.account-card {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	border-radius: var(--radius-md);
+	border-top: 4px solid var(--primary-tan);
+	border-bottom: 4px solid var(--primary-tan);
+	background: rgba(245, 245, 245, 0.55);
+}
+
+.account-form {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.account-form input {
+	background: rgba(255, 255, 255, 0.92);
+	color: var(--base-slate-black);
+	border: 1px solid rgba(192, 161, 119, 0.45);
+	padding: 0.55rem 0.75rem;
+}
+
+.account-help {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: rgba(20, 20, 20, 0.72);
+}
+
+.account-primary-button,
+.account-secondary-button,
+.account-signout-button {
+	justify-self: start;
+	padding: 0.65rem 1.2rem;
+	font-weight: 700;
+	cursor: pointer;
+	border-radius: var(--radius-sm);
+}
+
+.account-primary-button {
+	background: var(--primary-purple);
+	border: 1px solid var(--primary-purple);
+	color: var(--accent2-white);
+}
+
+.account-secondary-button {
+	background: rgba(192, 161, 119, 0.35);
+	border: 1px solid rgba(120, 90, 40, 0.7);
+	color: var(--base-slate-black);
+}
+
+.account-signout-button {
+	background: transparent;
+	border: 1px solid rgba(183, 24, 21, 0.55);
+	color: var(--accent1-red);
+}
+
+.account-feedback {
+	margin: 0;
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-sm);
+}
+
+.account-feedback--ok {
+	background: rgba(31, 90, 46, 0.12);
+	color: #1f5a2e;
+}
+
+.account-feedback--error {
+	background: rgba(183, 24, 21, 0.12);
+	color: #8a1f1f;
+}
+
+.account-primary-button:disabled,
+.account-secondary-button:disabled,
+.account-signout-button:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}

@@ -1,6 +1,15 @@
-﻿/*
-Planning note:
-- Responsibility: authRoutes module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿import { Router } from 'express';
+import * as authController from '../controllers/authController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
+
+const authRoutes = Router();
+
+authRoutes.post('/register', authController.register);
+authRoutes.post('/login', authController.login);
+authRoutes.post('/refresh', authController.refresh);
+authRoutes.post('/logout', authController.logout);
+authRoutes.get('/me', requireAuth, authController.me);
+authRoutes.patch('/me', requireAuth, authController.updateProfile);
+authRoutes.post('/me/password', requireAuth, authController.changePassword);
+
+export default authRoutes;

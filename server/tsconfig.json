@@ -9,7 +9,9 @@
     "types": ["node", "jest"]
   },
   "ts-node": {
-    "esm": true
+    "esm": true,
+    "logError": true,
+    "transpileOnly": true
   },
-  "include": ["src", "jest.config.ts"]
+  "include": ["src"]
 }

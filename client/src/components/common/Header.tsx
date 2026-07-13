@@ -16,8 +16,8 @@ function Header() {
 			{ label: 'Search', path: '/search' },
 			{ label: 'Creator', path: '/creator' },
 			{ label: 'Creator Home', path: '/creator/home' },
-			{ label: 'Content', path: '/content' },
-			{ label: 'User', path: '/user' }
+			{ label: 'DM Home', path: '/dm-home' },
+			{ label: 'Account', path: '/account' }
 		],
 		[]
 	);
@@ -64,4 +64,3 @@ function Header() {
 }
 
 export default Header;
-

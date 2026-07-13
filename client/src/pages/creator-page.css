@@ -1,12 +1,50 @@
 .creator-page {
 	display: grid;
 	gap: var(--space-4);
+	color: var(--base-slate-black);
+}
+
+.creator-page h1,
+.creator-page h2,
+.creator-page h3,
+.creator-page h4,
+.creator-page h5,
+.creator-page h6,
+.creator-page p,
+.creator-page li,
+.creator-page label,
+.creator-page legend,
+.creator-page span {
+	color: var(--base-slate-black);
+}
+
+.creator-page select,
+.creator-page input,
+.creator-page textarea,
+.creator-page button {
+	max-width: none;
+	background: rgba(255, 255, 255, 0.92);
+	color: var(--base-slate-black);
+	border-color: rgba(192, 161, 119, 0.45);
 }
 
 .creator-page select {
 	max-width: 360px;
-	background: rgba(255, 255, 255, 0.92);
-	color: var(--base-slate-black);
+}
+
+.creator-page input::placeholder,
+.creator-page textarea::placeholder {
+	color: rgba(20, 20, 20, 0.55);
+}
+
+/* White text only on purple surfaces */
+.creator-page .content-filter-chip--selected,
+.creator-page .content-result-item--selected,
+.creator-page .content-connect-button,
+.creator-page .lair-chat-send-button {
+	background: var(--primary-purple);
+	border-color: var(--primary-purple);
+	color: var(--accent2-white);
 }
 
 .template-card {

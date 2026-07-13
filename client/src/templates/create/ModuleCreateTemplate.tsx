@@ -1,4 +1,7 @@
-import { useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type MutableRefObject } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
+import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
 import './module-create-template.css';
 
 type StoryBlockType = 'story' | 'dmNote' | 'setting' | 'imageMap';
@@ -7,13 +10,19 @@ type StoryBlock = {
 	id: string;
 	type: StoryBlockType;
 	content: string;
+	imageID?: string;
+	caption?: string;
 };
 
 type AdventureSection = {
 	id: string;
 	title: string;
+	summary?: string;
+	estimatedPlayTime?: number;
 	blocks: StoryBlock[];
 };
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 const playstyleOptions = ['More Roleplay', 'Balanced', 'More Combat'] as const;
 
@@ -104,12 +113,25 @@ const contentTypeFilters = [
 
 type ContentTypeFilter = (typeof contentTypeFilters)[number];
 
+const open5eEndpointByFilter: Record<Exclude<ContentTypeFilter, 'all'>, string> = {
+	creatures: 'creatures',
+	items: 'items',
+	'magic items': 'magicitems',
+	weapons: 'weapons',
+	armor: 'armor',
+	conditions: 'conditions',
+	spells: 'spells',
+	'spell schools': 'spellschools',
+	classes: 'classes',
+	environments: 'environments',
+	abilities: 'abilities',
+	skills: 'skills',
+	services: 'services'
+};
+
 type ContentManagerResult = {
 	id: string;
-	title: string;
-	type: Exclude<ContentTypeFilter, 'all'>;
-	summary: string;
-	detail: string;
+	name: string;
 };
 
 type ChatMessage = {
@@ -118,53 +140,24 @@ type ChatMessage = {
 	content: string;
 };
 
-const contentManagerMockCatalog: ContentManagerResult[] = [
-	{
-		id: 'spell-fireball',
-		title: 'Fireball',
-		type: 'spells',
-		summary: '3rd-level evocation that deals 8d6 fire damage in a 20-foot radius.',
-		detail:
-			'Casting Time: 1 action\nRange: 150 feet\nComponents: V, S, M\nDuration: Instantaneous\n\nA bright streak flashes from your pointing finger to a point you choose within range and blossoms with a low roar into an explosion of flame. Creatures in a 20-foot radius sphere make a Dexterity save, taking 8d6 fire damage on a failed save, or half as much on a success.'
-	},
-	{
-		id: 'monster-young-red-dragon',
-		title: 'Young Red Dragon',
-		type: 'creatures',
-		summary: 'Large dragon with high mobility, fire breath, and fear presence.',
-		detail:
-			'Size/Type: Large dragon\nArmor Class: 18\nHit Points: 178 (17d10 + 85)\nSpeed: 40 ft., climb 40 ft., fly 80 ft.\n\nSTR 23, DEX 10, CON 21, INT 14, WIS 11, CHA 19\n\nActions include Multiattack and Fire Breath (Recharge 5-6), making it a deadly solo encounter for mid-level parties.'
-	},
-	{
-		id: 'magic-item-bag-of-holding',
-		title: 'Bag of Holding',
-		type: 'magic items',
-		summary: 'Uncommon wondrous item with extradimensional storage space.',
-		detail:
-			'Wondrous Item, Uncommon\n\nThis bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. It can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. Retrieving an item from the bag requires an action.'
-	},
-	{
-		id: 'class-wizard',
-		title: 'Wizard',
-		type: 'classes',
-		summary: 'Arcane full-caster with wide spell preparation and utility.',
-		detail:
-			'Primary Ability: Intelligence\nHit Die: d6\nSaving Throws: Intelligence, Wisdom\n\nWizards prepare spells from a spellbook and can specialize via Arcane Traditions. They excel in utility, battlefield control, and magical versatility.'
-	}
-];
-
 function ModuleCreateTemplate() {
 	const idCounterRef = useRef(0);
+	const [searchParams, setSearchParams] = useSearchParams();
+	const loadedModuleIdRef = useRef<string | null>(null);
 
+	const [moduleId, setModuleId] = useState<string | null>(null);
+	const [moduleStatus, setModuleStatus] = useState<'draft' | 'published'>('draft');
+	const [moduleTitle, setModuleTitle] = useState('');
 	const [moduleFlavorText, setModuleFlavorText] = useState('');
 	const [startingPartyLevel, setStartingPartyLevel] = useState(1);
 	const [endingPartyLevel, setEndingPartyLevel] = useState(2);
-	const [playstyle, setPlaystyle] = useState<(typeof playstyleOptions)[number]>('Balanced');
+	const [playstyle, setPlaystyle] = useState<Playstyle>('Balanced');
 	const [selectedAlignments, setSelectedAlignments] = useState<string[]>([]);
 	const [selectedBiomes, setSelectedBiomes] = useState<string[]>([]);
 	const [selectedContentFilter, setSelectedContentFilter] = useState<ContentTypeFilter>('all');
 	const [contentSearchInput, setContentSearchInput] = useState('');
-	const [activeContentQuery, setActiveContentQuery] = useState('');
+	const [contentSearchResults, setContentSearchResults] = useState<ContentManagerResult[]>([]);
+	const [contentResultCount, setContentResultCount] = useState(0);
 	const [contentViewMode, setContentViewMode] = useState<'results' | 'detail'>('results');
 	const [selectedContentResult, setSelectedContentResult] = useState<ContentManagerResult | null>(null);
 	const [chatDraft, setChatDraft] = useState('');
@@ -183,8 +176,191 @@ function ModuleCreateTemplate() {
 	const [adventures, setAdventures] = useState<AdventureSection[]>(() => [
 		createAdventureSection(() => nextId(idCounterRef), 1)
 	]);
+	const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+	const [saveMessage, setSaveMessage] = useState('');
+	const isSavingRef = useRef(false);
 
 	const adventureCount = adventures.length;
+
+	const buildPayload = (status?: 'draft' | 'published'): ModuleUpsertPayload => ({
+		title: moduleTitle.trim(),
+		flavorText: moduleFlavorText,
+		startingLevel: startingPartyLevel,
+		endingLevel: endingPartyLevel,
+		playstyle,
+		alignments: selectedAlignments,
+		biomes: selectedBiomes,
+		coverImage: null,
+		tags: [],
+		adventures: adventures.map((adventure, adventureIndex) => ({
+			id: adventure.id,
+			order: adventureIndex,
+			title: adventure.title.trim() || `Adventure ${adventureIndex + 1}`,
+			summary: adventure.summary ?? '',
+			estimatedPlayTime: adventure.estimatedPlayTime ?? 0,
+			sections: adventure.blocks.map((block, blockIndex) => ({
+				id: block.id,
+				type: block.type === 'imageMap' ? 'image' : block.type,
+				order: blockIndex,
+				content: block.content,
+				imageID: block.imageID ?? '',
+				caption: block.caption ?? ''
+			}))
+		})),
+		...(status ? { status } : {})
+	});
+
+	const applyLoadedModule = (doc: ModuleDocument) => {
+		const resolvedId = String(doc._id);
+		setModuleId(resolvedId);
+		setModuleStatus(doc.status);
+		setModuleTitle(doc.title ?? '');
+		setModuleFlavorText(doc.flavorText ?? '');
+		setStartingPartyLevel(doc.startingLevel ?? 1);
+		setEndingPartyLevel(doc.endingLevel ?? 2);
+		setPlaystyle(doc.playstyle ?? 'Balanced');
+		setSelectedAlignments(doc.alignments ?? []);
+		setSelectedBiomes(doc.biomes ?? []);
+		setAdventures(
+			(doc.adventures ?? []).length > 0
+				? (doc.adventures ?? [])
+						.slice()
+						.sort((a, b) => a.order - b.order)
+						.map((adventure) => ({
+							id: adventure.id,
+							title: adventure.title,
+							summary: adventure.summary ?? '',
+							estimatedPlayTime: adventure.estimatedPlayTime ?? 0,
+							blocks:
+								(adventure.sections ?? []).length > 0
+									? (adventure.sections ?? [])
+											.slice()
+											.sort((a, b) => a.order - b.order)
+											.map((section) => ({
+												id: section.id,
+												type: (section.type === 'image' ? 'imageMap' : section.type) as StoryBlockType,
+												content: section.content ?? '',
+												imageID: section.imageID ?? '',
+												caption: section.caption ?? ''
+											}))
+									: [
+											{
+												id: nextId(idCounterRef),
+												type: 'setting' as const,
+												content: ''
+											}
+									  ]
+						}))
+				: [createAdventureSection(() => nextId(idCounterRef), 1)]
+		);
+		loadedModuleIdRef.current = resolvedId;
+		setSearchParams(
+			(previous) => {
+				const next = new URLSearchParams(previous);
+				next.set('moduleId', resolvedId);
+				return next;
+			},
+			{ replace: true }
+		);
+	};
+
+	const moduleIdFromQuery = searchParams.get('moduleId')?.trim() ?? '';
+
+	useEffect(() => {
+		if (!moduleIdFromQuery || loadedModuleIdRef.current === moduleIdFromQuery) {
+			return;
+		}
+
+		let cancelled = false;
+		setSaveStatus('saving');
+		setSaveMessage('Loading module…');
+
+		const load = async () => {
+			try {
+				const doc = await getModule(moduleIdFromQuery);
+				if (cancelled) {
+					return;
+				}
+				applyLoadedModule(doc);
+				setSaveStatus('saved');
+				setSaveMessage('Module loaded.');
+			} catch (error) {
+				if (cancelled) {
+					return;
+				}
+				loadedModuleIdRef.current = null;
+				setSaveStatus('error');
+				setSaveMessage(error instanceof Error ? error.message : 'Failed to load module.');
+			}
+		};
+
+		void load();
+		return () => {
+			cancelled = true;
+		};
+	}, [moduleIdFromQuery]);
+
+	const persistModule = async (mode: 'draft' | 'publish' | 'autosave') => {
+		if (isSavingRef.current) {
+			return;
+		}
+
+		const title = moduleTitle.trim();
+		if (!title) {
+			if (mode !== 'autosave') {
+				setSaveStatus('error');
+				setSaveMessage('Add a module title before saving.');
+			}
+			return;
+		}
+
+		isSavingRef.current = true;
+		if (mode !== 'autosave') {
+			setSaveStatus('saving');
+			setSaveMessage(mode === 'publish' ? 'Publishing…' : 'Saving draft…');
+		}
+
+		try {
+			let saved: ModuleDocument;
+
+			if (mode === 'publish') {
+				saved = await publishModule(buildPayload('published'), moduleId);
+			} else if (moduleId) {
+				const status = mode === 'autosave' ? moduleStatus : 'draft';
+				saved = await updateModule(moduleId, buildPayload(status));
+			} else {
+				saved = await createModule(buildPayload('draft'));
+			}
+
+			applyLoadedModule(saved);
+			setSaveStatus('saved');
+			setSaveMessage(
+				mode === 'publish'
+					? 'Module published.'
+					: mode === 'autosave'
+						? 'Autosaved.'
+						: 'Draft saved.'
+			);
+		} catch (error) {
+			console.error(error);
+			setSaveStatus('error');
+			setSaveMessage(error instanceof Error ? error.message : 'Save failed.');
+		} finally {
+			isSavingRef.current = false;
+		}
+	};
+
+	const onAutosave = useEffectEvent(() => {
+		void persistModule('autosave');
+	});
+
+	useEffect(() => {
+		const intervalId = window.setInterval(() => {
+			onAutosave();
+		}, 30_000);
+
+		return () => window.clearInterval(intervalId);
+	}, [onAutosave]);
 
 	const updateAdventureCount = (nextCount: number) => {
 		const sanitizedTargetCount = Number.isFinite(nextCount) ? Math.max(1, nextCount) : 1;
@@ -327,37 +503,52 @@ function ModuleCreateTemplate() {
 		onChange([...selectedValues, value]);
 	};
 
-	const visibleContentTypes =
-		selectedContentFilter === 'all'
-			? contentTypeFilters.filter((contentTypeFilter) => contentTypeFilter !== 'all')
-			: [selectedContentFilter];
+	useEffect(() => {
+		const query = contentSearchInput.trim();
+		if (!query) {
+			setContentSearchResults([]);
+			setContentResultCount(0);
+			return;
+		}
 
-	const contentManagerResults = useMemo(() => {
-		const normalizedQuery = activeContentQuery.trim().toLowerCase();
+		const controller = new AbortController();
+		const timeoutId = window.setTimeout(async () => {
+			const path =
+				selectedContentFilter === 'all'
+					? `search/?query=${encodeURIComponent(query)}`
+					: `${open5eEndpointByFilter[selectedContentFilter]}/?name__icontains=${encodeURIComponent(query)}`;
 
-		return contentManagerMockCatalog.filter((entry) => {
-			const matchesType = visibleContentTypes.includes(entry.type);
-			if (!matchesType) {
-				return false;
+			try {
+				const response = await fetch(`/open5e-api/${path}`, { signal: controller.signal });
+				const data = await response.json();
+				console.log(data);
+
+				const results = (data.results ?? []).map(
+					(entry: { key?: string; object_pk?: string; name?: string; object_name?: string }, index: number) => ({
+						id: entry.key ?? entry.object_pk ?? String(index),
+						name: entry.name ?? entry.object_name ?? 'Unknown'
+					})
+				);
+
+				setContentSearchResults(results);
+				setContentResultCount(typeof data.count === 'number' ? data.count : results.length);
+				setSelectedContentResult(null);
+				setContentViewMode('results');
+			} catch (error) {
+				if ((error as Error).name === 'AbortError') {
+					return;
+				}
+				console.error(error);
+				setContentSearchResults([]);
+				setContentResultCount(0);
 			}
+		}, 1000);
 
-			if (!normalizedQuery) {
-				return true;
-			}
-
-			return (
-				entry.title.toLowerCase().includes(normalizedQuery) ||
-				entry.summary.toLowerCase().includes(normalizedQuery)
-			);
-		});
-	}, [activeContentQuery, visibleContentTypes]);
-
-	const submitContentSearch = (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		setActiveContentQuery(contentSearchInput);
-		setSelectedContentResult(null);
-		setContentViewMode('results');
-	};
+		return () => {
+			window.clearTimeout(timeoutId);
+			controller.abort();
+		};
+	}, [contentSearchInput, selectedContentFilter]);
 
 	const openContentDetail = (result: ContentManagerResult) => {
 		setSelectedContentResult(result);
@@ -431,7 +622,10 @@ function ModuleCreateTemplate() {
 									})}
 								</div>
 
-								<form className="content-search-form" onSubmit={submitContentSearch}>
+								<form
+									className="content-search-form"
+									onSubmit={(event) => event.preventDefault()}
+								>
 									<input
 										type="search"
 										value={contentSearchInput}
@@ -457,27 +651,27 @@ function ModuleCreateTemplate() {
 													connect to text
 												</button>
 											</div>
-											<h5>{selectedContentResult.title}</h5>
-											<p className="content-result-type">({selectedContentResult.type})</p>
-											<pre className="content-result-detail">{selectedContentResult.detail}</pre>
+											<h5>{selectedContentResult.name}</h5>
 										</div>
 									) : (
 										<div className="content-results-list" role="list">
-											{contentManagerResults.length > 0 ? (
-												contentManagerResults.map((result) => (
-													<button
-														key={result.id}
-														type="button"
-														className="content-result-item"
-														onClick={() => openContentDetail(result)}
-													>
-														<strong>{result.title}</strong>
-														<span>{result.summary}</span>
-													</button>
-												))
+											{contentSearchResults.length > 0 ? (
+												<>
+													<p className="content-results-count">{contentResultCount} results</p>
+													{contentSearchResults.map((result) => (
+														<button
+															key={result.id}
+															type="button"
+															className="content-result-item"
+															onClick={() => openContentDetail(result)}
+														>
+															<strong>{result.name}</strong>
+														</button>
+													))}
+												</>
 											) : (
 												<p className="content-results-empty">
-													No visual results yet. Choose filters and run a search to populate this panel.
+													No results yet. Choose a filter and search to populate this panel.
 												</p>
 											)}
 										</div>
@@ -519,6 +713,17 @@ function ModuleCreateTemplate() {
 				<h3>Story Content Info</h3>
 
 				<div className="module-create-form-grid">
+					<label htmlFor="module-title">Module Title</label>
+					<input
+						id="module-title"
+						type="text"
+						value={moduleTitle}
+						onChange={(event) => setModuleTitle(event.target.value)}
+						placeholder="Enter module title"
+						required
+					/>
+					<p className="field-help">Required to save or publish this module.</p>
+
 					<label htmlFor="module-flavor-text">Module Flavor Text</label>
 					<input
 						id="module-flavor-text"
@@ -595,9 +800,7 @@ function ModuleCreateTemplate() {
 					<select
 						id="playstyle"
 						value={playstyle}
-						onChange={(event) =>
-							setPlaystyle(event.target.value as (typeof playstyleOptions)[number])
-						}
+						onChange={(event) => setPlaystyle(event.target.value as Playstyle)}
 					>
 						{playstyleOptions.map((option) => (
 							<option key={option} value={option}>
@@ -787,6 +990,36 @@ function ModuleCreateTemplate() {
 				<button type="button" className="add-card-button add-adventure-button" onClick={addAdventure}>
 					+ Adventure Card
 				</button>
+			</section>
+
+			<section className="module-save-actions" aria-label="Save module">
+				<div className="module-save-buttons">
+					<button
+						type="button"
+						className="module-save-draft-button"
+						onClick={() => void persistModule('draft')}
+						disabled={saveStatus === 'saving'}
+					>
+						Save Draft
+					</button>
+					<button
+						type="button"
+						className="module-publish-button"
+						onClick={() => void persistModule('publish')}
+						disabled={saveStatus === 'saving'}
+					>
+						Publish Module
+					</button>
+				</div>
+				<p
+					className={`module-save-status module-save-status--${saveStatus}`}
+					aria-live="polite"
+				>
+					{saveMessage ||
+						(moduleId
+							? `Editing ${moduleStatus} module (${moduleId})`
+							: 'Not saved yet. Autosave runs every 30 seconds after a title is set.')}
+				</p>
 			</section>
 				</div>
 			</div>

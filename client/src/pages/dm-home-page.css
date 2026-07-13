@@ -1,0 +1,40 @@
+.dm-home-page {
+	display: grid;
+	gap: var(--space-4);
+	color: var(--base-slate-black);
+}
+
+.dm-home-page h1,
+.dm-home-page h2,
+.dm-home-page p {
+	color: var(--base-slate-black);
+}
+
+.dm-home-lede {
+	margin: 0;
+}
+
+.dm-home-section {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-4);
+	border-radius: var(--radius-md);
+	border-top: 4px solid var(--primary-tan);
+	border-bottom: 4px solid var(--primary-tan);
+	background: rgba(245, 245, 245, 0.45);
+}
+
+.dm-home-empty {
+	margin: 0;
+	color: rgba(20, 20, 20, 0.72);
+}
+
+.dm-home-secondary-button {
+	justify-self: start;
+	padding: 0.55rem 1rem;
+	font-weight: 700;
+	background: rgba(192, 161, 119, 0.35);
+	border: 1px solid rgba(120, 90, 40, 0.7);
+	color: var(--base-slate-black);
+	cursor: pointer;
+}

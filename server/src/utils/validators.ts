@@ -1,6 +1,41 @@
-﻿/*
-Planning note:
-- Responsibility: validators module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿import { z } from 'zod';
+import { MODULE_STATUSES, PLAYSTYLES, SECTION_TYPES } from '../types/moduleTypes.js';
+
+const sectionSchema = z.object({
+	id: z.string().min(1),
+	type: z.enum(SECTION_TYPES),
+	order: z.number().int().min(0),
+	content: z.string().optional().default(''),
+	imageID: z.string().optional().default(''),
+	caption: z.string().optional().default('')
+});
+
+const adventureSchema = z.object({
+	id: z.string().min(1),
+	order: z.number().int().min(0),
+	title: z.string().min(1),
+	summary: z.string().optional().default(''),
+	estimatedPlayTime: z.number().min(0).optional().default(0),
+	sections: z.array(sectionSchema).default([])
+});
+
+export const moduleUpsertSchema = z
+	.object({
+		title: z.string().trim().min(1, 'Title is required'),
+		flavorText: z.string().max(100).optional().default(''),
+		startingLevel: z.number().int().min(1).max(20),
+		endingLevel: z.number().int().min(1).max(20),
+		playstyle: z.enum(PLAYSTYLES),
+		alignments: z.array(z.string()).optional().default([]),
+		biomes: z.array(z.string()).optional().default([]),
+		coverImage: z.string().nullable().optional().default(null),
+		tags: z.array(z.string()).optional().default([]),
+		adventures: z.array(adventureSchema).min(1, 'At least one adventure is required'),
+		status: z.enum(MODULE_STATUSES).optional()
+	})
+	.refine((data) => data.endingLevel >= data.startingLevel, {
+		message: 'endingLevel must be greater than or equal to startingLevel',
+		path: ['endingLevel']
+	});
+
+export type ModuleUpsertBody = z.infer<typeof moduleUpsertSchema>;

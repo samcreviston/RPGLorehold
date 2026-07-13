@@ -1,11 +1,15 @@
 ﻿import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import usePageMeta from '../hooks/usePageMeta';
 import { createTemplateMap } from '../templates/create';
 import { templateTypeOptions, type TemplateTypeKey } from '../templates/templateTypes';
 import './creator-page.css';
 
 function CreatorPage() {
+	const [searchParams] = useSearchParams();
+	const moduleIdFromQuery = searchParams.get('moduleId')?.trim() ?? '';
 	const [selectedTemplateType, setSelectedTemplateType] = useState<TemplateTypeKey>('module');
+
 	usePageMeta({
 		title: 'Creator',
 		description: 'Build RPG content using dedicated templates for modules, campaigns, creatures, and items.',
@@ -36,10 +40,9 @@ function CreatorPage() {
 					</option>
 				))}
 			</select>
-			<SelectedTemplate />
+			<SelectedTemplate key={moduleIdFromQuery || 'new-module'} />
 		</main>
 	);
 }
 
 export default CreatorPage;
-

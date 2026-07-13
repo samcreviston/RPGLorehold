@@ -21,6 +21,7 @@
 	top: var(--space-4);
 	height: calc(100vh - calc(var(--space-4) * 2));
 	align-self: start;
+	min-width: 0;
 }
 
 .sidebar-tools-summary {
@@ -32,6 +33,7 @@
 	display: grid;
 	grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 	gap: var(--space-3);
+	min-width: 0;
 }
 
 .sidebar-tool-card {
@@ -41,6 +43,8 @@
 	display: grid;
 	gap: var(--space-2);
 	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .sidebar-tool-card h4 {
@@ -49,7 +53,7 @@
 }
 
 .content-manager-tool {
-	grid-template-rows: auto auto auto minmax(0, 1fr);
+	grid-template-rows: auto auto auto auto minmax(0, 1fr);
 	color: var(--base-slate-black);
 }
 
@@ -85,11 +89,13 @@
 
 .content-search-form {
 	margin: 0;
+	height: fit-content;
 }
 
 .content-search-form input {
 	width: 100%;
 	color: var(--base-slate-black);
+	background: rgba(255, 255, 255, 0.85);
 }
 
 .content-search-form input::placeholder {
@@ -117,6 +123,11 @@
 	border: 1px solid rgba(192, 161, 119, 0.2);
 	border-radius: var(--radius-sm);
 	background: transparent;
+	color: var(--base-slate-black);
+}
+
+.content-result-item strong {
+	color: var(--base-slate-black);
 }
 
 .content-result-item span {
@@ -216,10 +227,16 @@
 .lair-chat-input-wrap {
 	margin: 0;
 	position: relative;
+	min-width: 0;
+	width: 100%;
+	max-width: 100%;
 }
 
 .lair-chat-input-wrap textarea {
+	display: block;
 	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
 	padding-right: 5.5rem;
 	min-height: 92px;
 	resize: vertical;
@@ -267,7 +284,7 @@
 
 .field-help {
 	font-size: var(--text-sm);
-	color: var(--color-text-muted);
+	color: rgba(20, 20, 20, 0.72);
 }
 
 .checkbox-fieldset {
@@ -280,7 +297,7 @@
 
 .checkbox-fieldset legend {
 	padding: 0 var(--space-2);
-	color: var(--color-heading);
+	color: var(--base-slate-black);
 	font-family: var(--font-heading);
 }
 
@@ -500,4 +517,58 @@
 	.sidebar-tool-card {
 		min-height: 320px;
 	}
+}
+
+.module-save-actions {
+	display: grid;
+	gap: var(--space-2);
+	padding-top: var(--space-3);
+	border-top: 1px solid rgba(192, 161, 119, 0.3);
+}
+
+.module-save-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.module-save-draft-button,
+.module-publish-button {
+	padding: 0.65rem 1.25rem;
+	font-size: var(--text-sm);
+	font-weight: 700;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.module-save-draft-button {
+	border: 1px solid rgba(192, 161, 119, 0.55);
+	background: transparent;
+	color: var(--base-slate-black);
+}
+
+.module-publish-button {
+	border: 1px solid rgba(120, 90, 40, 0.7);
+	background: rgba(192, 161, 119, 0.35);
+	color: var(--base-slate-black);
+}
+
+.module-save-draft-button:disabled,
+.module-publish-button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.module-save-status {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--base-slate-black);
+}
+
+.module-save-status--error {
+	color: #8a1f1f;
+}
+
+.module-save-status--saved {
+	color: #1f5a2e;
 }

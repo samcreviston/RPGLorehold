@@ -1,6 +1,41 @@
-﻿/*
-Planning note:
-- Responsibility: server module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { connectDB } from './config/db.js';
+import { env } from './config/env.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/authRoutes.js';
+import moduleRoutes from './routes/moduleRoutes.js';
+import type {} from './types/express.js';
+
+async function startServer(): Promise<void> {
+	await connectDB();
+
+	const app = express();
+
+	app.use(helmet());
+	app.use(cors({ origin: true, credentials: true }));
+	app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
+	app.use(express.json({ limit: '2mb' }));
+	app.use(cookieParser());
+
+	app.get('/api/health', (_req, res) => {
+		res.json({ ok: true, db: env.MONGO_DB_NAME });
+	});
+
+	app.use('/api/auth', authRoutes);
+	app.use('/api/modules', moduleRoutes);
+
+	app.use(errorHandler);
+
+	app.listen(env.PORT, () => {
+		console.log(`Server listening on http://localhost:${env.PORT}`);
+	});
+}
+
+startServer().catch((error) => {
+	console.error('Failed to start server:', error);
+	process.exit(1);
+});
