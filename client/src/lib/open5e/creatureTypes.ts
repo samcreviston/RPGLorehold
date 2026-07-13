@@ -14,6 +14,14 @@ export type Open5eCreature = {
 	hit_points?: number | string;
 	hit_dice?: string | null;
 	speed?: string | Record<string, number | string | undefined> | null;
+	ability_scores?: {
+		strength?: number;
+		dexterity?: number;
+		constitution?: number;
+		intelligence?: number;
+		wisdom?: number;
+		charisma?: number;
+	} | null;
 	strength?: number;
 	dexterity?: number;
 	constitution?: number;

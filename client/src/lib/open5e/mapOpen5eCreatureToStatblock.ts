@@ -195,20 +195,23 @@ export function mapOpen5eCreatureToStatblock(creature: Open5eCreature): MappedCr
 	pushLine(propertyLines, 'Languages', creature.languages);
 	pushLine(propertyLines, 'Challenge', formatChallenge(creature));
 
+	const scores = creature.ability_scores;
+	const abilities = {
+		str: scores?.strength ?? creature.strength ?? 10,
+		dex: scores?.dexterity ?? creature.dexterity ?? 10,
+		con: scores?.constitution ?? creature.constitution ?? 10,
+		int: scores?.intelligence ?? creature.intelligence ?? 10,
+		wis: scores?.wisdom ?? creature.wisdom ?? 10,
+		cha: scores?.charisma ?? creature.charisma ?? 10
+	};
+
 	return {
 		name: asNonEmptyString(creature.name) ?? 'Unknown Creature',
 		subtitle,
 		armorClass,
 		hitPoints,
 		speed: formatSpeed(creature.speed),
-		abilities: {
-			str: creature.strength ?? 10,
-			dex: creature.dexterity ?? 10,
-			con: creature.constitution ?? 10,
-			int: creature.intelligence ?? 10,
-			wis: creature.wisdom ?? 10,
-			cha: creature.charisma ?? 10
-		},
+		abilities,
 		propertyLines,
 		traits: mapNamedBlocks(creature.special_abilities),
 		actions: mapNamedBlocks(creature.actions),

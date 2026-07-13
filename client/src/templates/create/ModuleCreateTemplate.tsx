@@ -170,6 +170,7 @@ function ModuleCreateTemplate() {
 	const [contentSearchInput, setContentSearchInput] = useState('');
 	const [contentSearchResults, setContentSearchResults] = useState<ContentManagerResult[]>([]);
 	const [contentResultCount, setContentResultCount] = useState(0);
+	const [contentSearchStatus, setContentSearchStatus] = useState<'idle' | 'loading' | 'done'>('idle');
 	const [contentViewMode, setContentViewMode] = useState<'results' | 'detail'>('results');
 	const [selectedContentResult, setSelectedContentResult] = useState<ContentManagerResult | null>(null);
 	const [creatureStatblock, setCreatureStatblock] = useState<MappedCreatureStatblock | null>(null);
@@ -523,59 +524,102 @@ function ModuleCreateTemplate() {
 		if (!query) {
 			setContentSearchResults([]);
 			setContentResultCount(0);
+			setContentSearchStatus('idle');
 			return;
 		}
 
 		const controller = new AbortController();
+		setContentSearchStatus('loading');
 		const timeoutId = window.setTimeout(async () => {
+			const usesCatalogKeyFilter =
+				selectedContentFilter === 'armor' ||
+				selectedContentFilter === 'weapons' ||
+				selectedContentFilter === 'conditions' ||
+				selectedContentFilter === 'spell schools' ||
+				selectedContentFilter === 'classes' ||
+				selectedContentFilter === 'environments' ||
+				selectedContentFilter === 'services';
+
 			const path =
 				selectedContentFilter === 'all'
 					? `search/?query=${encodeURIComponent(query)}`
-					: `${open5eEndpointByFilter[selectedContentFilter]}/?name__icontains=${encodeURIComponent(query)}`;
+					: selectedContentFilter === 'abilities'
+						? `${open5eEndpointByFilter.abilities}/?fields=key,descriptions,name`
+						: usesCatalogKeyFilter
+							? `${open5eEndpointByFilter[selectedContentFilter]}/?exclude=document`
+							: `${open5eEndpointByFilter[selectedContentFilter]}/?name__icontains=${encodeURIComponent(query)}`;
 
 			try {
 				const response = await fetch(`/open5e-api/${path}`, { signal: controller.signal });
 				const data = await response.json();
 				console.log(data);
 
-				const results = (data.results ?? []).map(
-					(
-						entry: {
-							key?: string;
-							object_pk?: string;
-							slug?: string;
-							name?: string;
-							object_name?: string;
-							object_model?: string;
-							route?: string;
-						},
-						index: number
-					) => {
-						const slugOrKey = entry.slug ?? entry.object_pk ?? entry.key ?? String(index);
-						const route = entry.route?.replace(/^v2\//, '') ?? '';
-						const inferredCreature =
-							selectedContentFilter === 'creatures' ||
-							entry.object_model?.toLowerCase() === 'creature' ||
-							route.includes('creatures');
+				const searchLower = query.toLowerCase();
+				const rawResults = (data.results ?? []) as Array<{
+					key?: string;
+					object_pk?: string;
+					slug?: string;
+					name?: string;
+					object_name?: string;
+					object_model?: string;
+					route?: string;
+				}>;
 
-						return {
-							id: slugOrKey,
-							name: entry.name ?? entry.object_name ?? 'Unknown',
-							slug: slugOrKey,
-							objectModel:
-								entry.object_model ??
-								(selectedContentFilter === 'creatures' ? 'Creature' : undefined),
-							detailPath: inferredCreature
-								? `creatures/${slugOrKey}/`
-								: route
-									? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
-									: undefined
-						};
-					}
-				);
+				// Some Open5e list endpoints return the full catalog; filter client-side.
+				const catalogEndpoints = [
+					'armor/',
+					'weapons/',
+					'conditions/',
+					'spellschools/',
+					'classes/',
+					'environments/',
+					'services/',
+					'abilities/'
+				];
+				const isCatalogEndpoint = catalogEndpoints.some((endpoint) => path.startsWith(endpoint));
+				const sourceResults =
+					selectedContentFilter === 'abilities'
+						? rawResults.filter((item) => (item.name ?? '').toLowerCase().includes(searchLower))
+						: usesCatalogKeyFilter || isCatalogEndpoint
+							? rawResults.filter((item) => (item.key ?? '').toLowerCase().includes(searchLower))
+							: rawResults;
+
+				const results = sourceResults.map((entry, index) => {
+					const slugOrKey = entry.slug ?? entry.object_pk ?? entry.key ?? String(index);
+					const route = entry.route?.replace(/^v2\//, '') ?? '';
+					const inferredCreature =
+						selectedContentFilter === 'creatures' ||
+						entry.object_model?.toLowerCase() === 'creature' ||
+						route.includes('creatures');
+
+					return {
+						id: slugOrKey,
+						name: entry.name ?? entry.object_name ?? 'Unknown',
+						slug: slugOrKey,
+						objectModel:
+							entry.object_model ??
+							(selectedContentFilter === 'creatures'
+								? 'Creature'
+								: selectedContentFilter === 'armor'
+									? 'Armor'
+									: selectedContentFilter === 'weapons'
+										? 'Weapon'
+										: undefined),
+						detailPath: inferredCreature
+							? `creatures/${slugOrKey}/`
+							: route
+								? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
+								: selectedContentFilter === 'armor'
+									? `armor/${slugOrKey}/`
+									: selectedContentFilter === 'weapons'
+										? `weapons/${slugOrKey}/`
+										: undefined
+					};
+				});
 
 				setContentSearchResults(results);
-				setContentResultCount(typeof data.count === 'number' ? data.count : results.length);
+				setContentResultCount(results.length);
+				setContentSearchStatus('done');
 				setSelectedContentResult(null);
 				setCreatureStatblock(null);
 				setCreatureDetailStatus('idle');
@@ -588,6 +632,7 @@ function ModuleCreateTemplate() {
 				console.error(error);
 				setContentSearchResults([]);
 				setContentResultCount(0);
+				setContentSearchStatus('done');
 			}
 		}, 1000);
 
@@ -743,7 +788,9 @@ function ModuleCreateTemplate() {
 										</div>
 									) : (
 										<div className="content-results-list" role="list">
-											{contentSearchResults.length > 0 ? (
+											{contentSearchStatus === 'loading' ? (
+												<p className="content-results-empty">Loading results</p>
+											) : contentSearchResults.length > 0 ? (
 												<>
 													<p className="content-results-count">{contentResultCount} results</p>
 													{contentSearchResults.map((result) => (
@@ -757,6 +804,10 @@ function ModuleCreateTemplate() {
 														</button>
 													))}
 												</>
+											) : contentSearchStatus === 'done' ? (
+												<p className="content-results-empty">
+													No results for that search, try searching in &quot;all&quot; instead.
+												</p>
 											) : (
 												<p className="content-results-empty">
 													No results yet. Choose a filter and search to populate this panel.
