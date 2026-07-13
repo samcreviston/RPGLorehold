@@ -126,3 +126,23 @@ export async function publishModule(
 		next(error);
 	}
 }
+
+export async function deleteModule(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	try {
+		const authorId = requireUserId(req);
+		const id = paramId(req.params.id);
+		const deleted = await moduleService.deleteModule(id, authorId);
+		if (!deleted) {
+			throw new HttpError(404, 'Module not found');
+		}
+
+		await authService.untrackModuleOwnership(authorId, id);
+		res.status(204).send();
+	} catch (error) {
+		next(error);
+	}
+}

@@ -5,13 +5,22 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { ensureModulesIndex } from './config/meilisearch.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import moduleRoutes from './routes/moduleRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
 import type {} from './types/express.js';
 
 async function startServer(): Promise<void> {
 	await connectDB();
+
+	try {
+		await ensureModulesIndex();
+		console.log('Meilisearch modules index ready');
+	} catch (error) {
+		console.error('Meilisearch index setup failed (is docker compose up?):', error);
+	}
 
 	const app = express();
 
@@ -27,6 +36,7 @@ async function startServer(): Promise<void> {
 
 	app.use('/api/auth', authRoutes);
 	app.use('/api/modules', moduleRoutes);
+	app.use('/api/search', searchRoutes);
 
 	app.use(errorHandler);
 

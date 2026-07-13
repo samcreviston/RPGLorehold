@@ -1,6 +1,10 @@
 ﻿import mongoose from 'mongoose';
 import { Module, type ModuleDocument } from '../models/Module.js';
 import type { ModuleStatus, ModuleUpsertInput } from '../types/moduleTypes.js';
+import {
+	removeModuleFromIndexBackground,
+	syncModuleIndexBackground
+} from './indexingService.js';
 
 function buildSearchText(input: ModuleUpsertInput): string {
 	const adventureTitles = input.adventures.map((adventure) => adventure.title).join(' ');
@@ -68,6 +72,14 @@ export async function createModule(
 
 	applyUpsertFields(doc, input, status);
 	await doc.save();
+	console.log('[modules] created in database', {
+		id: String(doc._id),
+		title: doc.title,
+		status: doc.status,
+		published: doc.published,
+		publishedAt: doc.publishedAt
+	});
+	syncModuleIndexBackground(String(doc._id));
 	return doc;
 }
 
@@ -88,7 +100,19 @@ export async function updateModule(
 
 	const nextStatus = status ?? (doc.status as ModuleStatus);
 	applyUpsertFields(doc, input, nextStatus);
+	doc.markModified('status');
+	doc.markModified('published');
+	doc.markModified('publishedAt');
+	doc.markModified('adventures');
 	await doc.save();
+	console.log('[modules] updated in database', {
+		id: String(doc._id),
+		title: doc.title,
+		status: doc.status,
+		published: doc.published,
+		publishedAt: doc.publishedAt
+	});
+	syncModuleIndexBackground(String(doc._id));
 	return doc;
 }
 
@@ -143,5 +167,30 @@ export async function setModuleStatus(
 	}
 
 	await doc.save();
+	console.log('[modules] status updated in database', {
+		id: String(doc._id),
+		title: doc.title,
+		status: doc.status,
+		published: doc.published,
+		publishedAt: doc.publishedAt
+	});
+	syncModuleIndexBackground(String(doc._id));
 	return doc;
+}
+
+export async function deleteModule(
+	moduleId: string,
+	authorId: string
+): Promise<boolean> {
+	const result = await Module.findOneAndDelete({
+		_id: moduleId,
+		authorId: new mongoose.Types.ObjectId(authorId)
+	});
+
+	if (!result) {
+		return false;
+	}
+
+	removeModuleFromIndexBackground(moduleId);
+	return true;
 }

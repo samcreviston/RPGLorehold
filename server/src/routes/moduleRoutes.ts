@@ -12,5 +12,6 @@ moduleRoutes.post('/publish', moduleController.publishModule);
 moduleRoutes.get('/:id', moduleController.getModule);
 moduleRoutes.put('/:id', moduleController.updateModule);
 moduleRoutes.post('/:id/publish', moduleController.publishModule);
+moduleRoutes.delete('/:id', moduleController.deleteModule);
 
 export default moduleRoutes;

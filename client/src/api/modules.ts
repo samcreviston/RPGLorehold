@@ -42,3 +42,9 @@ export async function publishModule(
 	});
 	return data.module;
 }
+
+export async function deleteModule(id: string): Promise<void> {
+	await apiRequest<Record<string, never>>(`/modules/${id}`, {
+		method: 'DELETE'
+	});
+}

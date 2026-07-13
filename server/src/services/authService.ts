@@ -277,3 +277,17 @@ export async function trackModuleOwnership(
 		}
 	});
 }
+
+export async function untrackModuleOwnership(
+	userId: string,
+	moduleId: string
+): Promise<void> {
+	const moduleObjectId = new mongoose.Types.ObjectId(moduleId);
+	await User.findByIdAndUpdate(userId, {
+		$pull: {
+			createdModules: moduleObjectId,
+			recentlyEdited: moduleObjectId,
+			favoriteModules: moduleObjectId
+		}
+	});
+}

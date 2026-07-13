@@ -240,6 +240,7 @@ function ModuleCreateTemplate() {
 
 	const [moduleId, setModuleId] = useState<string | null>(null);
 	const [moduleStatus, setModuleStatus] = useState<'draft' | 'published'>('draft');
+	const moduleStatusRef = useRef<'draft' | 'published'>('draft');
 	const [moduleTitle, setModuleTitle] = useState('');
 	const [moduleFlavorText, setModuleFlavorText] = useState('');
 	const [startingPartyLevel, setStartingPartyLevel] = useState(1);
@@ -330,6 +331,7 @@ function ModuleCreateTemplate() {
 	const applyLoadedModule = (doc: ModuleDocument) => {
 		const resolvedId = String(doc._id);
 		setModuleId(resolvedId);
+		moduleStatusRef.current = doc.status;
 		setModuleStatus(doc.status);
 		setModuleTitle(doc.title ?? '');
 		setModuleFlavorText(doc.flavorText ?? '');
@@ -442,13 +444,21 @@ function ModuleCreateTemplate() {
 
 			if (mode === 'publish') {
 				saved = await publishModule(buildPayload('published'), moduleId);
+				console.log('[modules] publish response', {
+					id: String(saved._id),
+					status: saved.status,
+					published: saved.published
+				});
 			} else if (moduleId) {
-				const status = mode === 'autosave' ? moduleStatus : 'draft';
+				// Use ref so autosave cannot overwrite a just-published module
+				// before React state from publish has committed.
+				const status = mode === 'autosave' ? moduleStatusRef.current : 'draft';
 				saved = await updateModule(moduleId, buildPayload(status));
 			} else {
 				saved = await createModule(buildPayload('draft'));
 			}
 
+			moduleStatusRef.current = saved.status;
 			applyLoadedModule(saved);
 			setSaveStatus('saved');
 			setSaveMessage(

@@ -1,6 +1,8 @@
-﻿/*
-Planning note:
-- Responsibility: searchRoutes module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿import { Router } from 'express';
+import * as searchController from '../controllers/searchController.js';
+
+const searchRoutes = Router();
+
+searchRoutes.get('/', searchController.search);
+
+export default searchRoutes;

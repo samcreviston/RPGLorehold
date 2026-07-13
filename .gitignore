@@ -16,3 +16,5 @@ notes.txt
 scaffold.ps1
 configure-architecture.ps1
 Open5eExampleResponsesByType.md
+docker-compose.yml
+.env.example
