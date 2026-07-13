@@ -154,6 +154,22 @@ function buildCreatureContentLink(name: string, documentKey: string): string {
 	return `https://api.open5e.com/v2/creatures/?name__iexact=${encodeURIComponent(name)}&document__key__in=${encodeURIComponent(documentKey)}`;
 }
 
+function toOpen5eProxyPath(href: string): string | null {
+	try {
+		const url = new URL(href);
+		if (url.hostname !== 'api.open5e.com') {
+			return null;
+		}
+		const path = url.pathname.replace(/^\/v2\/?/, '');
+		return `/open5e-api/${path}${url.search}`;
+	} catch {
+		if (href.startsWith('/open5e-api/')) {
+			return href;
+		}
+		return null;
+	}
+}
+
 type ChatMessage = {
 	id: string;
 	role: 'assistant' | 'user';
@@ -188,6 +204,10 @@ function ModuleCreateTemplate() {
 	const [pendingContentLink, setPendingContentLink] = useState<PendingContentLink | null>(null);
 	const contentSearchInputRef = useRef<HTMLInputElement | null>(null);
 	const storyEditorRefs = useRef<Record<string, StoryBlockEditorHandle | null>>({});
+	const contentWindowFetchRef = useRef<AbortController | null>(null);
+	const [contentWindowStatus, setContentWindowStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+	const [contentWindowCreature, setContentWindowCreature] = useState<MappedCreatureStatblock | null>(null);
+	const [contentWindowError, setContentWindowError] = useState('');
 	const [chatDraft, setChatDraft] = useState('');
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
 		{
@@ -197,6 +217,10 @@ function ModuleCreateTemplate() {
 		}
 	]);
 	const [isSidebarToolsOpen, setIsSidebarToolsOpen] = useState(false);
+	const [isStoryContentInfoOpen, setIsStoryContentInfoOpen] = useState(true);
+	const [isContentManagerOpen, setIsContentManagerOpen] = useState(true);
+	const [isContentWindowOpen, setIsContentWindowOpen] = useState(true);
+	const [isLairChatOpen, setIsLairChatOpen] = useState(true);
 	const [inlineAddSectionMenu, setInlineAddSectionMenu] = useState<{
 		adventureId: string;
 		afterBlockId: string;
@@ -389,26 +413,6 @@ function ModuleCreateTemplate() {
 
 		return () => window.clearInterval(intervalId);
 	}, [onAutosave]);
-
-	const updateAdventureCount = (nextCount: number) => {
-		const sanitizedTargetCount = Number.isFinite(nextCount) ? Math.max(1, nextCount) : 1;
-
-		setAdventures((previousAdventures) => {
-			if (sanitizedTargetCount === previousAdventures.length) {
-				return previousAdventures;
-			}
-
-			if (sanitizedTargetCount < previousAdventures.length) {
-				return previousAdventures.slice(0, sanitizedTargetCount);
-			}
-
-			const nextAdventures = [...previousAdventures];
-			for (let index = previousAdventures.length; index < sanitizedTargetCount; index += 1) {
-				nextAdventures.push(createAdventureSection(() => nextId(idCounterRef), index + 1));
-			}
-			return nextAdventures;
-		});
-	};
 
 	const addAdventure = () => {
 		setAdventures((previousAdventures) => [
@@ -737,6 +741,51 @@ function ModuleCreateTemplate() {
 		}
 	};
 
+	const openContentLinkInWindow = useEffectEvent((href: string) => {
+		setIsSidebarToolsOpen(true);
+		setIsContentWindowOpen(true);
+
+		const proxyPath = toOpen5eProxyPath(href);
+		if (!proxyPath || !proxyPath.includes('creatures')) {
+			setContentWindowCreature(null);
+			setContentWindowStatus('error');
+			setContentWindowError('Only creature links can be viewed in the Content Window right now.');
+			return;
+		}
+
+		contentWindowFetchRef.current?.abort();
+		const controller = new AbortController();
+		contentWindowFetchRef.current = controller;
+
+		setContentWindowStatus('loading');
+		setContentWindowError('');
+		setContentWindowCreature(null);
+
+		void (async () => {
+			try {
+				const response = await fetch(proxyPath, { signal: controller.signal });
+				if (!response.ok) {
+					throw new Error(`Failed to load content (${response.status})`);
+				}
+				const data = (await response.json()) as { results?: Open5eCreature[] };
+				const creature = data.results?.[0];
+				if (!creature) {
+					throw new Error('No creature found for that link.');
+				}
+				setContentWindowCreature(mapOpen5eCreatureToStatblock(creature));
+				setContentWindowStatus('idle');
+			} catch (error) {
+				if ((error as Error).name === 'AbortError') {
+					return;
+				}
+				console.error(error);
+				setContentWindowCreature(null);
+				setContentWindowStatus('error');
+				setContentWindowError(error instanceof Error ? error.message : 'Failed to load content.');
+			}
+		})();
+	});
+
 	const sendChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
@@ -777,8 +826,24 @@ function ModuleCreateTemplate() {
 						Sidebar Tools
 					</button>
 					<div className={`sidebar-tools-content ${isSidebarToolsOpen ? 'sidebar-tools-content--open' : ''}`}>
-							<section className="sidebar-tool-card content-manager-tool" aria-label="5e Content Manager">
-								<h4>5e Content Manager</h4>
+							<section
+								className={`sidebar-tool-card content-manager-tool${isContentManagerOpen ? '' : ' sidebar-tool-card--collapsed'}`}
+								aria-label="5e Content Manager"
+							>
+								<div className="section-card-heading">
+									<h4>5e Content Manager</h4>
+									<button
+										type="button"
+										className="section-collapse-button"
+										aria-expanded={isContentManagerOpen}
+										aria-label={isContentManagerOpen ? 'Collapse 5e Content Manager' : 'Expand 5e Content Manager'}
+										onClick={() => setIsContentManagerOpen((previous) => !previous)}
+									>
+										{isContentManagerOpen ? '▾' : '▸'}
+									</button>
+								</div>
+								{isContentManagerOpen ? (
+									<>
 								<p className="content-manager-helper">
 									highlight text in your story or dm note to attach D&amp;D content!
 								</p>
@@ -884,10 +949,63 @@ function ModuleCreateTemplate() {
 										</div>
 									)}
 								</section>
+									</>
+								) : null}
 							</section>
 
-							<section className="sidebar-tool-card lair-chat-tool" aria-label="Lair Co-Dragon Chat">
-								<h4>Lair Co-Dragon Chat</h4>
+							<section
+								className={`sidebar-tool-card content-window-tool${isContentWindowOpen ? '' : ' sidebar-tool-card--collapsed'}`}
+								aria-label="5e Content Window"
+							>
+								<div className="section-card-heading">
+									<h4>5e Content Window</h4>
+									<button
+										type="button"
+										className="section-collapse-button"
+										aria-expanded={isContentWindowOpen}
+										aria-label={
+											isContentWindowOpen ? 'Collapse 5e Content Window' : 'Expand 5e Content Window'
+										}
+										onClick={() => setIsContentWindowOpen((previous) => !previous)}
+									>
+										{isContentWindowOpen ? '▾' : '▸'}
+									</button>
+								</div>
+								{isContentWindowOpen ? (
+									<div className="content-window-body">
+										{contentWindowStatus === 'loading' ? (
+											<p className="content-results-empty">Loading creature…</p>
+										) : contentWindowStatus === 'error' ? (
+											<p className="content-results-empty">{contentWindowError}</p>
+										) : contentWindowCreature ? (
+											<CreatureStatBlock creature={contentWindowCreature} />
+										) : (
+											<p className="content-results-empty">
+												Click a linked creature tag to view it here.
+											</p>
+										)}
+									</div>
+								) : null}
+							</section>
+
+							<section
+								className={`sidebar-tool-card lair-chat-tool${isLairChatOpen ? '' : ' sidebar-tool-card--collapsed'}`}
+								aria-label="Lair Co-Dragon Chat"
+							>
+								<div className="section-card-heading">
+									<h4>Lair Co-Dragon Chat</h4>
+									<button
+										type="button"
+										className="section-collapse-button"
+										aria-expanded={isLairChatOpen}
+										aria-label={isLairChatOpen ? 'Collapse Lair Co-Dragon Chat' : 'Expand Lair Co-Dragon Chat'}
+										onClick={() => setIsLairChatOpen((previous) => !previous)}
+									>
+										{isLairChatOpen ? '▾' : '▸'}
+									</button>
+								</div>
+								{isLairChatOpen ? (
+									<>
 								<div className="lair-chat-log" aria-live="polite">
 									{chatMessages.map((message) => (
 										<article
@@ -910,15 +1028,33 @@ function ModuleCreateTemplate() {
 										Send
 									</button>
 								</form>
+									</>
+								) : null}
 							</section>
 						</div>
 				</aside>
 
 				<div className="module-create-main">
 
-			<section className="story-content-info" aria-label="Story content info">
-				<h3>Story Content Info</h3>
+			<section
+				className={`story-content-info${isStoryContentInfoOpen ? '' : ' story-content-info--collapsed'}`}
+				aria-label="Story content info"
+			>
+				<div className="section-card-heading">
+					<h3>Story Content Info</h3>
+					<button
+						type="button"
+						className="section-collapse-button"
+						aria-expanded={isStoryContentInfoOpen}
+						aria-label={isStoryContentInfoOpen ? 'Collapse Story Content Info' : 'Expand Story Content Info'}
+						onClick={() => setIsStoryContentInfoOpen((previous) => !previous)}
+					>
+						{isStoryContentInfoOpen ? '▾' : '▸'}
+					</button>
+				</div>
 
+				{isStoryContentInfoOpen ? (
+					<>
 				<div className="module-create-form-grid">
 					<label htmlFor="module-title">Module Title</label>
 					<input
@@ -987,22 +1123,6 @@ function ModuleCreateTemplate() {
 							: ' End level currently at minimum allowed by start level.'}
 					</p>
 
-					<label htmlFor="adventure-count"># of Adventures</label>
-					<input
-						id="adventure-count"
-						type="number"
-						min={1}
-						value={adventureCount}
-						onChange={(event) => {
-							const nextCount = Number.parseInt(event.target.value, 10);
-							if (Number.isNaN(nextCount)) {
-								return;
-							}
-							updateAdventureCount(nextCount);
-						}}
-					/>
-					<p className="field-help">Automatically synced with the adventure cards below.</p>
-
 					<label htmlFor="playstyle">Playstyle</label>
 					<select
 						id="playstyle"
@@ -1016,6 +1136,12 @@ function ModuleCreateTemplate() {
 						))}
 					</select>
 					<p className="field-help">Set the expected RP/combat balance for this content.</p>
+
+					<span className="field-label"># of Adventures</span>
+					<p className="adventure-count-value" aria-live="polite">
+						{adventureCount}
+					</p>
+					<p className="field-help">Automatically generated with the # of adventure cards below.</p>
 				</div>
 
 				<fieldset className="checkbox-fieldset">
@@ -1051,6 +1177,8 @@ function ModuleCreateTemplate() {
 						))}
 					</div>
 				</fieldset>
+					</>
+				) : null}
 			</section>
 
 			<h3 className="story-begins-heading">Where the Story Begins!</h3>
@@ -1112,6 +1240,7 @@ function ModuleCreateTemplate() {
 														updateBlockContent(adventure.id, block.id, html)
 													}
 													onRequestLinkContent={requestLinkContent}
+													onOpenContentLink={openContentLinkInWindow}
 												/>
 											)}
 										</section>

@@ -7,6 +7,10 @@ export type ContentLinkAttributes = {
 	label: string;
 };
 
+export type ContentLinkOptions = {
+	onOpenContentLink?: ((href: string) => void) | undefined;
+};
+
 declare module '@tiptap/core' {
 	interface Commands<ReturnType> {
 		contentLink: {
@@ -15,12 +19,18 @@ declare module '@tiptap/core' {
 	}
 }
 
-export const ContentLink = Node.create({
+export const ContentLink = Node.create<ContentLinkOptions>({
 	name: 'contentLink',
 	group: 'inline',
 	inline: true,
 	atom: true,
 	selectable: true,
+
+	addOptions() {
+		return {
+			onOpenContentLink: undefined
+		};
+	},
 
 	addAttributes() {
 		return {

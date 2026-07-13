@@ -28,6 +28,7 @@ type StoryBlockEditorProps = {
 	blockId: string;
 	onContentChange: (html: string) => void;
 	onRequestLinkContent: (pending: PendingContentLink) => void;
+	onOpenContentLink: (href: string) => void;
 };
 
 function normalizeEditorHtml(value: string): string {
@@ -37,11 +38,21 @@ function normalizeEditorHtml(value: string): string {
 
 const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProps>(
 	function StoryBlockEditor(
-		{ content, placeholder, adventureId, blockId, onContentChange, onRequestLinkContent },
+		{
+			content,
+			placeholder,
+			adventureId,
+			blockId,
+			onContentChange,
+			onRequestLinkContent,
+			onOpenContentLink
+		},
 		ref
 	) {
 		const [hasTextSelection, setHasTextSelection] = useState(false);
 		const lastEmittedHtmlRef = useRef(normalizeEditorHtml(content));
+		const onOpenContentLinkRef = useRef(onOpenContentLink);
+		onOpenContentLinkRef.current = onOpenContentLink;
 
 		const editor = useEditor({
 			extensions: [
@@ -51,7 +62,11 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 					codeBlock: false,
 					horizontalRule: false
 				}),
-				ContentLink
+				ContentLink.configure({
+					onOpenContentLink: (href) => {
+						onOpenContentLinkRef.current(href);
+					}
+				})
 			],
 			content: normalizeEditorHtml(content),
 			editorProps: {
