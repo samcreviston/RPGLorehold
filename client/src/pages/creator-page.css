@@ -41,7 +41,10 @@
 .creator-page .content-filter-chip--selected,
 .creator-page .content-result-item--selected,
 .creator-page .content-connect-button,
-.creator-page .lair-chat-send-button {
+.creator-page .lair-chat-send-button,
+.creator-page .story-block-link-content-button,
+.creator-page .module-save-draft-button,
+.creator-page .module-publish-button {
 	background: var(--primary-purple);
 	border-color: var(--primary-purple);
 	color: var(--accent2-white);

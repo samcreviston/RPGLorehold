@@ -2,6 +2,10 @@ import { useEffect, useEffectEvent, useRef, useState, type MutableRefObject } fr
 import { useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
 import CreatureStatBlock from '../../components/content/CreatureStatBlock';
+import StoryBlockEditor, {
+	type PendingContentLink,
+	type StoryBlockEditorHandle
+} from '../../components/editor/StoryBlockEditor';
 import type { MappedCreatureStatblock, Open5eCreature } from '../../lib/open5e/creatureTypes';
 import { mapOpen5eCreatureToStatblock } from '../../lib/open5e/mapOpen5eCreatureToStatblock';
 import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
@@ -146,6 +150,10 @@ function isCreatureResult(result: ContentManagerResult): boolean {
 	return model === 'creature' || path.includes('creatures');
 }
 
+function buildCreatureContentLink(name: string, documentKey: string): string {
+	return `https://api.open5e.com/v2/creatures/?name__iexact=${encodeURIComponent(name)}&document__key__in=${encodeURIComponent(documentKey)}`;
+}
+
 type ChatMessage = {
 	id: string;
 	role: 'assistant' | 'user';
@@ -176,6 +184,10 @@ function ModuleCreateTemplate() {
 	const [creatureStatblock, setCreatureStatblock] = useState<MappedCreatureStatblock | null>(null);
 	const [creatureDetailStatus, setCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 	const [creatureDetailError, setCreatureDetailError] = useState('');
+	const [selectedCreatureDocumentKey, setSelectedCreatureDocumentKey] = useState('');
+	const [pendingContentLink, setPendingContentLink] = useState<PendingContentLink | null>(null);
+	const contentSearchInputRef = useRef<HTMLInputElement | null>(null);
+	const storyEditorRefs = useRef<Record<string, StoryBlockEditorHandle | null>>({});
 	const [chatDraft, setChatDraft] = useState('');
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
 		{
@@ -584,7 +596,7 @@ function ModuleCreateTemplate() {
 							? rawResults.filter((item) => (item.key ?? '').toLowerCase().includes(searchLower))
 							: rawResults;
 
-				const results = sourceResults.map((entry, index) => {
+				const results: ContentManagerResult[] = sourceResults.map((entry, index) => {
 					const slugOrKey = entry.slug ?? entry.object_pk ?? entry.key ?? String(index);
 					const route = entry.route?.replace(/^v2\//, '') ?? '';
 					const inferredCreature =
@@ -592,28 +604,32 @@ function ModuleCreateTemplate() {
 						entry.object_model?.toLowerCase() === 'creature' ||
 						route.includes('creatures');
 
+					const objectModel =
+						entry.object_model ??
+						(selectedContentFilter === 'creatures'
+							? 'Creature'
+							: selectedContentFilter === 'armor'
+								? 'Armor'
+								: selectedContentFilter === 'weapons'
+									? 'Weapon'
+									: undefined);
+
+					const detailPath = inferredCreature
+						? `creatures/${slugOrKey}/`
+						: route
+							? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
+							: selectedContentFilter === 'armor'
+								? `armor/${slugOrKey}/`
+								: selectedContentFilter === 'weapons'
+									? `weapons/${slugOrKey}/`
+									: undefined;
+
 					return {
 						id: slugOrKey,
 						name: entry.name ?? entry.object_name ?? 'Unknown',
 						slug: slugOrKey,
-						objectModel:
-							entry.object_model ??
-							(selectedContentFilter === 'creatures'
-								? 'Creature'
-								: selectedContentFilter === 'armor'
-									? 'Armor'
-									: selectedContentFilter === 'weapons'
-										? 'Weapon'
-										: undefined),
-						detailPath: inferredCreature
-							? `creatures/${slugOrKey}/`
-							: route
-								? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
-								: selectedContentFilter === 'armor'
-									? `armor/${slugOrKey}/`
-									: selectedContentFilter === 'weapons'
-										? `weapons/${slugOrKey}/`
-										: undefined
+						...(objectModel ? { objectModel } : {}),
+						...(detailPath ? { detailPath } : {})
 					};
 				});
 
@@ -647,6 +663,7 @@ function ModuleCreateTemplate() {
 		setContentViewMode('detail');
 		setCreatureStatblock(null);
 		setCreatureDetailError('');
+		setSelectedCreatureDocumentKey('');
 
 		if (!isCreatureResult(result)) {
 			setCreatureDetailStatus('idle');
@@ -663,6 +680,7 @@ function ModuleCreateTemplate() {
 					throw new Error(`Failed to load creature (${response.status})`);
 				}
 				const data = (await response.json()) as Open5eCreature;
+				setSelectedCreatureDocumentKey(data.document?.key ?? '');
 				setCreatureStatblock(mapOpen5eCreatureToStatblock(data));
 				setCreatureDetailStatus('idle');
 			} catch (error) {
@@ -679,6 +697,44 @@ function ModuleCreateTemplate() {
 		setCreatureStatblock(null);
 		setCreatureDetailStatus('idle');
 		setCreatureDetailError('');
+		setSelectedCreatureDocumentKey('');
+	};
+
+	const requestLinkContent = (pending: PendingContentLink) => {
+		setPendingContentLink(pending);
+		setIsSidebarToolsOpen(true);
+		window.requestAnimationFrame(() => {
+			const input = contentSearchInputRef.current;
+			if (!input) {
+				return;
+			}
+			input.focus();
+			const caret = input.value.length;
+			input.setSelectionRange(caret, caret);
+		});
+	};
+
+	const connectSelectedContentToText = () => {
+		if (!pendingContentLink || !selectedContentResult) {
+			return;
+		}
+		if (!isCreatureResult(selectedContentResult) || !selectedCreatureDocumentKey) {
+			console.warn('Content linking currently supports creatures with a document key only.');
+			return;
+		}
+
+		const href = buildCreatureContentLink(selectedContentResult.name, selectedCreatureDocumentKey);
+		const editor = storyEditorRefs.current[pendingContentLink.blockId];
+		const applied = editor?.applyContentLink(
+			href,
+			pendingContentLink.from,
+			pendingContentLink.to,
+			pendingContentLink.text
+		);
+
+		if (applied) {
+			setPendingContentLink(null);
+		}
 	};
 
 	const sendChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
@@ -748,6 +804,7 @@ function ModuleCreateTemplate() {
 									onSubmit={(event) => event.preventDefault()}
 								>
 									<input
+										ref={contentSearchInputRef}
 										type="search"
 										value={contentSearchInput}
 										onChange={(event) => setContentSearchInput(event.target.value)}
@@ -768,7 +825,18 @@ function ModuleCreateTemplate() {
 												>
 													←
 												</button>
-												<button type="button" className="content-connect-button">
+												<button
+													type="button"
+													className="content-connect-button"
+													onClick={connectSelectedContentToText}
+													disabled={
+														!pendingContentLink ||
+														!selectedContentResult ||
+														!isCreatureResult(selectedContentResult) ||
+														!selectedCreatureDocumentKey ||
+														creatureDetailStatus === 'loading'
+													}
+												>
 													connect to text
 												</button>
 											</div>
@@ -1032,13 +1100,18 @@ function ModuleCreateTemplate() {
 													Upload a file (.jpeg, .png, .pdf)
 												</button>
 											) : (
-												<textarea
-													value={block.content}
-													onChange={(event) =>
-														updateBlockContent(adventure.id, block.id, event.target.value)
-													}
+												<StoryBlockEditor
+													ref={(handle) => {
+														storyEditorRefs.current[block.id] = handle;
+													}}
+													content={block.content}
 													placeholder={`Enter ${blockTypeLabelMap[block.type]} content`}
-													rows={6}
+													adventureId={adventure.id}
+													blockId={block.id}
+													onContentChange={(html) =>
+														updateBlockContent(adventure.id, block.id, html)
+													}
+													onRequestLinkContent={requestLinkContent}
 												/>
 											)}
 										</section>
