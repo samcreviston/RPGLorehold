@@ -29,7 +29,8 @@ export type SearchModulesParams = {
 	biomes?: string[];
 	tags?: string[];
 	authorUsername?: string;
-	numberOfAdventures?: number;
+	adventuresMin?: number;
+	adventuresMax?: number;
 	levelMin?: number;
 	levelMax?: number;
 	sort?: string;
@@ -65,8 +66,11 @@ function toQueryString(params: SearchModulesParams): string {
 	if (params.authorUsername) {
 		search.set('authorUsername', params.authorUsername);
 	}
-	if (typeof params.numberOfAdventures === 'number') {
-		search.set('numberOfAdventures', String(params.numberOfAdventures));
+	if (typeof params.adventuresMin === 'number') {
+		search.set('adventuresMin', String(params.adventuresMin));
+	}
+	if (typeof params.adventuresMax === 'number') {
+		search.set('adventuresMax', String(params.adventuresMax));
 	}
 	if (typeof params.levelMin === 'number') {
 		search.set('levelMin', String(params.levelMin));

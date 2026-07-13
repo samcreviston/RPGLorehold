@@ -1,12 +1,15 @@
-﻿export type SearchFilterValues = {
+﻿import { useEffect, useId, useRef, useState } from 'react';
+
+export type SearchFilterValues = {
 	playstyle: string;
 	alignment: string;
-	biome: string;
+	biomes: string[];
 	tag: string;
 	authorUsername: string;
 	levelMin: string;
 	levelMax: string;
-	numberOfAdventures: string;
+	adventuresMin: string;
+	adventuresMax: string;
 };
 
 type SearchFiltersProps = {
@@ -18,12 +21,13 @@ type SearchFiltersProps = {
 export const emptySearchFilters: SearchFilterValues = {
 	playstyle: '',
 	alignment: '',
-	biome: '',
+	biomes: [],
 	tag: '',
 	authorUsername: '',
 	levelMin: '',
 	levelMax: '',
-	numberOfAdventures: ''
+	adventuresMin: '',
+	adventuresMax: ''
 };
 
 const playstyleOptions = ['More Roleplay', 'Balanced', 'More Combat'] as const;
@@ -90,11 +94,84 @@ const biomeOptions = [
 ] as const;
 
 const levelOptions = Array.from({ length: 20 }, (_, index) => String(index + 1));
+const adventureCountOptions = Array.from({ length: 30 }, (_, index) => String(index + 1));
+
+function biomeSummaryLabel(biomes: string[]): string {
+	if (biomes.length === 0) {
+		return 'All';
+	}
+	if (biomes.length === 1) {
+		return biomes[0]!;
+	}
+	return `${biomes.length} selected`;
+}
 
 function SearchFilters({ values, onChange, disabled = false }: SearchFiltersProps) {
+	const biomesMenuId = useId();
+	const biomesRootRef = useRef<HTMLDivElement>(null);
+	const [biomesOpen, setBiomesOpen] = useState(false);
+
 	function update<K extends keyof SearchFilterValues>(key: K, value: SearchFilterValues[K]) {
 		onChange({ ...values, [key]: value });
 	}
+
+	function toggleBiome(biome: string) {
+		const selected = values.biomes.includes(biome)
+			? values.biomes.filter((entry) => entry !== biome)
+			: [...values.biomes, biome];
+		update('biomes', selected);
+	}
+
+	function setAdventuresMin(nextMin: string) {
+		const next: SearchFilterValues = { ...values, adventuresMin: nextMin };
+		if (nextMin && values.adventuresMax && Number(values.adventuresMax) < Number(nextMin)) {
+			next.adventuresMax = nextMin;
+		}
+		onChange(next);
+	}
+
+	function setAdventuresMax(nextMax: string) {
+		if (nextMax && values.adventuresMin && Number(nextMax) < Number(values.adventuresMin)) {
+			update('adventuresMax', values.adventuresMin);
+			return;
+		}
+		update('adventuresMax', nextMax);
+	}
+
+	useEffect(() => {
+		if (!biomesOpen) {
+			return;
+		}
+
+		function handlePointerDown(event: MouseEvent) {
+			if (!biomesRootRef.current?.contains(event.target as Node)) {
+				setBiomesOpen(false);
+			}
+		}
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key === 'Escape') {
+				setBiomesOpen(false);
+			}
+		}
+
+		document.addEventListener('mousedown', handlePointerDown);
+		document.addEventListener('keydown', handleKeyDown);
+		return () => {
+			document.removeEventListener('mousedown', handlePointerDown);
+			document.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [biomesOpen]);
+
+	useEffect(() => {
+		if (disabled) {
+			setBiomesOpen(false);
+		}
+	}, [disabled]);
+
+	const maxAdventureOptions = values.adventuresMin
+		? adventureCountOptions.filter((option) => Number(option) >= Number(values.adventuresMin))
+		: adventureCountOptions;
 
 	return (
 		<section className="search-labeled-row" aria-label="Filter by">
@@ -132,21 +209,49 @@ function SearchFilters({ values, onChange, disabled = false }: SearchFiltersProp
 					</select>
 				</label>
 
-				<label className="search-control">
-					<span>Biome</span>
-					<select
-						value={values.biome}
+				<div className="search-control search-multi-select" ref={biomesRootRef}>
+					<span id={`${biomesMenuId}-label`}>Biomes</span>
+					<button
+						type="button"
+						className="search-multi-select__trigger"
 						disabled={disabled}
-						onChange={(event) => update('biome', event.target.value)}
+						aria-haspopup="listbox"
+						aria-expanded={biomesOpen}
+						aria-controls={biomesMenuId}
+						aria-labelledby={`${biomesMenuId}-label`}
+						onClick={() => setBiomesOpen((open) => !open)}
 					>
-						<option value="">Any</option>
-						{biomeOptions.map((option) => (
-							<option key={option} value={option}>
-								{option}
-							</option>
-						))}
-					</select>
-				</label>
+						{biomeSummaryLabel(values.biomes)}
+					</button>
+					{biomesOpen ? (
+						<div
+							id={biomesMenuId}
+							className="search-multi-select__menu"
+							role="listbox"
+							aria-multiselectable="true"
+							aria-labelledby={`${biomesMenuId}-label`}
+						>
+							<label className="search-multi-select__option">
+								<input
+									type="checkbox"
+									checked={values.biomes.length === 0}
+									onChange={() => update('biomes', [])}
+								/>
+								<span>All</span>
+							</label>
+							{biomeOptions.map((option) => (
+								<label className="search-multi-select__option" key={option}>
+									<input
+										type="checkbox"
+										checked={values.biomes.includes(option)}
+										onChange={() => toggleBiome(option)}
+									/>
+									<span>{option}</span>
+								</label>
+							))}
+						</div>
+					) : null}
+				</div>
 
 				<label className="search-control">
 					<span>Level min</span>
@@ -181,16 +286,35 @@ function SearchFilters({ values, onChange, disabled = false }: SearchFiltersProp
 				</label>
 
 				<label className="search-control">
-					<span>Adventures</span>
-					<input
-						type="number"
-						min={1}
-						step={1}
-						placeholder="Any"
-						value={values.numberOfAdventures}
+					<span>Adventures min</span>
+					<select
+						value={values.adventuresMin}
 						disabled={disabled}
-						onChange={(event) => update('numberOfAdventures', event.target.value)}
-					/>
+						onChange={(event) => setAdventuresMin(event.target.value)}
+					>
+						<option value="">Any</option>
+						{adventureCountOptions.map((option) => (
+							<option key={option} value={option}>
+								{option}
+							</option>
+						))}
+					</select>
+				</label>
+
+				<label className="search-control">
+					<span>Adventures max</span>
+					<select
+						value={values.adventuresMax}
+						disabled={disabled}
+						onChange={(event) => setAdventuresMax(event.target.value)}
+					>
+						<option value="">Any</option>
+						{maxAdventureOptions.map((option) => (
+							<option key={option} value={option}>
+								{option}
+							</option>
+						))}
+					</select>
 				</label>
 
 				<div className="search-control-bar__pair">

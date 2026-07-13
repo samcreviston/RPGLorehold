@@ -1,10 +1,16 @@
 ﻿import mongoose from 'mongoose';
 import { Module, type ModuleDocument } from '../models/Module.js';
+import { User } from '../models/User.js';
 import type { ModuleStatus, ModuleUpsertInput } from '../types/moduleTypes.js';
 import {
 	removeModuleFromIndexBackground,
 	syncModuleIndexBackground
 } from './indexingService.js';
+
+export type PublishedModuleResult = {
+	module: ModuleDocument;
+	authorUsername: string;
+};
 
 function buildSearchText(input: ModuleUpsertInput): string {
 	const adventureTitles = input.adventures.map((adventure) => adventure.title).join(' ');
@@ -125,6 +131,21 @@ export async function getModuleById(
 		filter.authorId = new mongoose.Types.ObjectId(authorId);
 	}
 	return Module.findOne(filter);
+}
+
+export async function getPublishedModuleById(
+	moduleId: string
+): Promise<PublishedModuleResult | null> {
+	const doc = await Module.findOne({ _id: moduleId, status: 'published' });
+	if (!doc) {
+		return null;
+	}
+
+	const user = await User.findById(doc.authorId).select('username').lean();
+	return {
+		module: doc,
+		authorUsername: user?.username ?? ''
+	};
 }
 
 export async function listModulesForAuthor(

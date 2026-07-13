@@ -6,6 +6,7 @@ type SearchResultsProps = {
 	loading: boolean;
 	error: string | null;
 	emptyMessage: string;
+	onSelectResult?: (moduleId: string) => void;
 };
 
 function formatAttributes(hit: ModuleSearchHit): string {
@@ -18,7 +19,7 @@ function formatAttributes(hit: ModuleSearchHit): string {
 	return parts.join(' · ');
 }
 
-function SearchResults({ hits, loading, error, emptyMessage }: SearchResultsProps) {
+function SearchResults({ hits, loading, error, emptyMessage, onSelectResult }: SearchResultsProps) {
 	return (
 		<section className="search-panel" aria-labelledby="search-results-heading">
 			<h2 id="search-results-heading">Search Results</h2>
@@ -32,6 +33,7 @@ function SearchResults({ hits, loading, error, emptyMessage }: SearchResultsProp
 						contentName={hit.title}
 						attributes={formatAttributes(hit)}
 						flavorText={hit.flavorText}
+						{...(onSelectResult ? { onSelect: () => onSelectResult(hit.id) } : {})}
 					/>
 				))}
 			</div>

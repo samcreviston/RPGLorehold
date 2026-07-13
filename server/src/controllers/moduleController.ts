@@ -76,6 +76,27 @@ export async function getModule(
 	}
 }
 
+export async function getPublishedModule(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	try {
+		const id = paramId(req.params.id);
+		const result = await moduleService.getPublishedModuleById(id);
+		if (!result) {
+			throw new HttpError(404, 'Published module not found');
+		}
+
+		res.json({
+			module: result.module,
+			authorUsername: result.authorUsername
+		});
+	} catch (error) {
+		next(error);
+	}
+}
+
 export async function updateModule(
 	req: Request,
 	res: Response,

@@ -1,15 +1,24 @@
-import { useEffect, useEffectEvent, useRef, useState, type MutableRefObject } from 'react';
+import {
+	useEffect,
+	useEffectEvent,
+	useRef,
+	useState,
+	type MutableRefObject
+} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
+import { useAuth } from '../../auth/AuthContext';
+import ContentWindowTool from '../../components/content/ContentWindowTool';
 import CreatureStatBlock from '../../components/content/CreatureStatBlock';
 import Open5eDetailCard from '../../components/content/Open5eDetailCard';
+import ModulePreviewView from '../../components/module/ModulePreviewView';
 import StoryBlockEditor, {
 	type PendingContentLink,
 	type StoryBlockEditorHandle
 } from '../../components/editor/StoryBlockEditor';
+import { useContentWindow } from '../../hooks/useContentWindow';
 import type { MappedCreatureStatblock, Open5eCreature } from '../../lib/open5e/creatureTypes';
 import {
-	findResultByContentKey,
 	resolveContentKey,
 	type Open5eKeyedItem
 } from '../../lib/open5e/findByDocumentKey';
@@ -17,7 +26,14 @@ import { mapOpen5eCreatureToStatblock } from '../../lib/open5e/mapOpen5eCreature
 import { mapOpen5eItemToDetailView } from '../../lib/open5e/mapOpen5eItemToDetailView';
 import type { Open5eDetailViewModel } from '../../lib/open5e/open5eDetailTypes';
 import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
+import { setLastCreatorModuleId } from '../../utils/lastCreatorModule';
 import './module-create-template.css';
+
+type CreatorViewMode = 'editor' | 'preview';
+
+type ModuleCreateTemplateProps = {
+	viewMode?: CreatorViewMode;
+};
 
 type StoryBlockType = 'story' | 'dmNote' | 'setting' | 'imageMap';
 
@@ -196,26 +212,6 @@ function buildContentSearchLink(
 	return `https://api.open5e.com/v2/search/?query=${encodeURIComponent(selectedName)}`;
 }
 
-function toOpen5eProxyPath(href: string): string | null {
-	try {
-		const url = new URL(href);
-		if (url.hostname !== 'api.open5e.com') {
-			return null;
-		}
-		const path = url.pathname.replace(/^\/v2\/?/, '');
-		return `/open5e-api/${path}${url.search}`;
-	} catch {
-		if (href.startsWith('/open5e-api/')) {
-			return href;
-		}
-		return null;
-	}
-}
-
-function isCreatureDeepLink(href: string): boolean {
-	return href.includes('/creatures/') && href.includes('name__iexact=');
-}
-
 function kindHintForResult(filter: ContentTypeFilter, result: ContentManagerResult): string {
 	if (filter !== 'all') {
 		return filter === 'magic items'
@@ -233,7 +229,8 @@ type ChatMessage = {
 	content: string;
 };
 
-function ModuleCreateTemplate() {
+function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps) {
+	const { user } = useAuth();
 	const idCounterRef = useRef(0);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const loadedModuleIdRef = useRef<string | null>(null);
@@ -263,11 +260,7 @@ function ModuleCreateTemplate() {
 	const [pendingContentLink, setPendingContentLink] = useState<PendingContentLink | null>(null);
 	const contentSearchInputRef = useRef<HTMLInputElement | null>(null);
 	const storyEditorRefs = useRef<Record<string, StoryBlockEditorHandle | null>>({});
-	const contentWindowFetchRef = useRef<AbortController | null>(null);
-	const [contentWindowStatus, setContentWindowStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-	const [contentWindowCreature, setContentWindowCreature] = useState<MappedCreatureStatblock | null>(null);
-	const [contentWindowDetail, setContentWindowDetail] = useState<Open5eDetailViewModel | null>(null);
-	const [contentWindowError, setContentWindowError] = useState('');
+	const contentWindow = useContentWindow();
 	const [contentConnectError, setContentConnectError] = useState('');
 	const [showLinkContentHint, setShowLinkContentHint] = useState(false);
 	const [linkContentHintFlashKey, setLinkContentHintFlashKey] = useState(0);
@@ -285,7 +278,6 @@ function ModuleCreateTemplate() {
 	const [isSidebarToolsOpen, setIsSidebarToolsOpen] = useState(false);
 	const [isStoryContentInfoOpen, setIsStoryContentInfoOpen] = useState(true);
 	const [isContentManagerOpen, setIsContentManagerOpen] = useState(true);
-	const [isContentWindowOpen, setIsContentWindowOpen] = useState(false);
 	const [isLairChatOpen, setIsLairChatOpen] = useState(true);
 	const [inlineAddSectionMenu, setInlineAddSectionMenu] = useState<{
 		adventureId: string;
@@ -373,6 +365,7 @@ function ModuleCreateTemplate() {
 				: [createAdventureSection(() => nextId(idCounterRef), 1)]
 		);
 		loadedModuleIdRef.current = resolvedId;
+		setLastCreatorModuleId(resolvedId);
 		setSearchParams(
 			(previous) => {
 				const next = new URLSearchParams(previous);
@@ -419,14 +412,14 @@ function ModuleCreateTemplate() {
 		};
 	}, [moduleIdFromQuery]);
 
-	const persistModule = async (mode: 'draft' | 'publish' | 'autosave') => {
+	const persistModule = async (mode: 'draft' | 'publish' | 'autosave' | 'leave') => {
 		if (isSavingRef.current) {
 			return;
 		}
 
 		const title = moduleTitle.trim();
 		if (!title) {
-			if (mode !== 'autosave') {
+			if (mode !== 'autosave' && mode !== 'leave') {
 				setSaveStatus('error');
 				setSaveMessage('Add a module title before saving.');
 			}
@@ -434,7 +427,7 @@ function ModuleCreateTemplate() {
 		}
 
 		isSavingRef.current = true;
-		if (mode !== 'autosave') {
+		if (mode !== 'autosave' && mode !== 'leave') {
 			setSaveStatus('saving');
 			setSaveMessage(mode === 'publish' ? 'Publishing…' : 'Saving draft…');
 		}
@@ -450,12 +443,21 @@ function ModuleCreateTemplate() {
 					published: saved.published
 				});
 			} else if (moduleId) {
-				// Use ref so autosave cannot overwrite a just-published module
-				// before React state from publish has committed.
-				const status = mode === 'autosave' ? moduleStatusRef.current : 'draft';
+				// Autosave/leave preserve status so they cannot demote a published module.
+				// Explicit "Save Draft" still forces draft.
+				const status =
+					mode === 'autosave' || mode === 'leave' ? moduleStatusRef.current : 'draft';
 				saved = await updateModule(moduleId, buildPayload(status));
 			} else {
 				saved = await createModule(buildPayload('draft'));
+			}
+
+			const savedId = String(saved._id);
+			setLastCreatorModuleId(savedId);
+
+			// Leave-flush runs after unmount; never touch router/state or it can navigate back.
+			if (mode === 'leave') {
+				return;
 			}
 
 			moduleStatusRef.current = saved.status;
@@ -470,8 +472,10 @@ function ModuleCreateTemplate() {
 			);
 		} catch (error) {
 			console.error(error);
-			setSaveStatus('error');
-			setSaveMessage(error instanceof Error ? error.message : 'Save failed.');
+			if (mode !== 'leave') {
+				setSaveStatus('error');
+				setSaveMessage(error instanceof Error ? error.message : 'Save failed.');
+			}
 		} finally {
 			isSavingRef.current = false;
 		}
@@ -481,6 +485,10 @@ function ModuleCreateTemplate() {
 		void persistModule('autosave');
 	});
 
+	const onLeaveFlushDraft = useEffectEvent(() => {
+		void persistModule('leave');
+	});
+
 	useEffect(() => {
 		const intervalId = window.setInterval(() => {
 			onAutosave();
@@ -488,6 +496,17 @@ function ModuleCreateTemplate() {
 
 		return () => window.clearInterval(intervalId);
 	}, [onAutosave]);
+
+	useEffect(() => {
+		return () => {
+			// Skip when remounting on the same editor route (e.g. key change after first save).
+			// window.location is already updated for real navigations away from /creator.
+			if (window.location.pathname === '/creator') {
+				return;
+			}
+			onLeaveFlushDraft();
+		};
+	}, [onLeaveFlushDraft]);
 
 	const addAdventure = () => {
 		setAdventures((previousAdventures) => [
@@ -895,96 +914,7 @@ function ModuleCreateTemplate() {
 
 	const openContentLinkInWindow = useEffectEvent((href: string, contentKey?: string) => {
 		setIsSidebarToolsOpen(true);
-		setIsContentWindowOpen(true);
-
-		const proxyPath = toOpen5eProxyPath(href);
-		if (!proxyPath) {
-			setContentWindowCreature(null);
-			setContentWindowDetail(null);
-			setContentWindowStatus('error');
-			setContentWindowError('Invalid content link.');
-			return;
-		}
-
-		contentWindowFetchRef.current?.abort();
-		const controller = new AbortController();
-		contentWindowFetchRef.current = controller;
-
-		setContentWindowStatus('loading');
-		setContentWindowError('');
-		setContentWindowCreature(null);
-		setContentWindowDetail(null);
-
-		void (async () => {
-			try {
-				const response = await fetch(proxyPath, { signal: controller.signal });
-				if (!response.ok) {
-					throw new Error(`Failed to load content (${response.status})`);
-				}
-				const data = (await response.json()) as { results?: Array<Open5eCreature & Open5eKeyedItem> };
-				let results = data.results ?? [];
-
-				if (isCreatureDeepLink(href)) {
-					const creature = contentKey
-						? findResultByContentKey(results, contentKey) ?? results[0]
-						: results[0];
-					if (!creature) {
-						throw new Error('No creature found for that link.');
-					}
-					setContentWindowCreature(mapOpen5eCreatureToStatblock(creature));
-					setContentWindowStatus('idle');
-					return;
-				}
-
-				if (!contentKey) {
-					throw new Error('Missing content key on this link.');
-				}
-
-				let matched = findResultByContentKey(results, contentKey);
-				if (!matched) {
-					const retryUrl = new URL(proxyPath, window.location.origin);
-					retryUrl.searchParams.delete('name__icontains');
-					const retryPath = `${retryUrl.pathname}${retryUrl.search}`;
-					if (retryPath !== proxyPath) {
-						const retryResponse = await fetch(retryPath, { signal: controller.signal });
-						if (!retryResponse.ok) {
-							throw new Error(`Failed to load content (${retryResponse.status})`);
-						}
-						const retryData = (await retryResponse.json()) as {
-							results?: Array<Open5eCreature & Open5eKeyedItem>;
-						};
-						results = retryData.results ?? [];
-						matched = findResultByContentKey(results, contentKey);
-					}
-				}
-
-				if (!matched) {
-					throw new Error('No result matched the saved content key.');
-				}
-
-				const looksLikeCreature =
-					proxyPath.includes('creatures') ||
-					Boolean(
-						(matched as Open5eCreature).challenge_rating != null || (matched as Open5eCreature).cr != null
-					);
-
-				if (looksLikeCreature) {
-					setContentWindowCreature(mapOpen5eCreatureToStatblock(matched as Open5eCreature));
-				} else {
-					setContentWindowDetail(mapOpen5eItemToDetailView(matched, proxyPath));
-				}
-				setContentWindowStatus('idle');
-			} catch (error) {
-				if ((error as Error).name === 'AbortError') {
-					return;
-				}
-				console.error(error);
-				setContentWindowCreature(null);
-				setContentWindowDetail(null);
-				setContentWindowStatus('error');
-				setContentWindowError(error instanceof Error ? error.message : 'Failed to load content.');
-			}
-		})();
+		contentWindow.openContentLinkInWindow(href, contentKey);
 	});
 
 	const sendChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
@@ -1010,6 +940,32 @@ function ModuleCreateTemplate() {
 		setChatMessages((previousMessages) => [...previousMessages, userMessage, assistantReply]);
 		setChatDraft('');
 	};
+
+	const contentWindowPanel = (
+		<ContentWindowTool
+			isOpen={contentWindow.isContentWindowOpen}
+			onToggleOpen={() => contentWindow.setIsContentWindowOpen((previous) => !previous)}
+			status={contentWindow.contentWindowStatus}
+			error={contentWindow.contentWindowError}
+			creature={contentWindow.contentWindowCreature}
+			detail={contentWindow.contentWindowDetail}
+		/>
+	);
+
+	if (viewMode === 'preview') {
+		return (
+			<ModulePreviewView
+				title={moduleTitle}
+				authorName={user?.username?.trim() || 'Unknown author'}
+				adventures={adventures}
+				emptyMessage="begin writing your content in the editor tab and then preview it here"
+				contentWindow={{
+					...contentWindow,
+					openContentLinkInWindow
+				}}
+			/>
+		);
+	}
 
 	return (
 		<section className="template-card module-create-template" aria-label="Module create template">
@@ -1184,42 +1140,7 @@ function ModuleCreateTemplate() {
 								) : null}
 							</section>
 
-							<section
-								className={`sidebar-tool-card content-window-tool${isContentWindowOpen ? '' : ' sidebar-tool-card--collapsed'}`}
-								aria-label="5e Content Window"
-							>
-								<div className="section-card-heading">
-									<h4>5e Content Window</h4>
-									<button
-										type="button"
-										className="section-collapse-button"
-										aria-expanded={isContentWindowOpen}
-										aria-label={
-											isContentWindowOpen ? 'Collapse 5e Content Window' : 'Expand 5e Content Window'
-										}
-										onClick={() => setIsContentWindowOpen((previous) => !previous)}
-									>
-										{isContentWindowOpen ? '▾' : '▸'}
-									</button>
-								</div>
-								{isContentWindowOpen ? (
-									<div className="content-window-body">
-										{contentWindowStatus === 'loading' ? (
-											<p className="content-results-empty">Loading content…</p>
-										) : contentWindowStatus === 'error' ? (
-											<p className="content-results-empty">{contentWindowError}</p>
-										) : contentWindowCreature ? (
-											<CreatureStatBlock creature={contentWindowCreature} />
-										) : contentWindowDetail ? (
-											<Open5eDetailCard detail={contentWindowDetail} />
-										) : (
-											<p className="content-results-empty">
-												Click a linked content tag to view it here.
-											</p>
-										)}
-									</div>
-								) : null}
-							</section>
+							{contentWindowPanel}
 
 							<section
 								className={`sidebar-tool-card lair-chat-tool${isLairChatOpen ? '' : ' sidebar-tool-card--collapsed'}`}

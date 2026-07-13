@@ -29,26 +29,35 @@ const optionalAdventureCount = z.preprocess(
 	z.coerce.number().int().min(1).max(100).optional()
 );
 
-const searchQuerySchema = z.object({
-	q: z.string().optional().default(''),
-	playstyle: z.array(z.string()).optional(),
-	alignments: z.array(z.string()).optional(),
-	biomes: z.array(z.string()).optional(),
-	tags: z.array(z.string()).optional(),
-	authorUsername: z.string().trim().optional(),
-	numberOfAdventures: optionalAdventureCount,
-	levelMin: optionalInt,
-	levelMax: optionalInt,
-	sort: z.string().optional().default('relevance'),
-	page: z.preprocess(
-		(value) => (value === undefined || value === '' ? 1 : value),
-		z.coerce.number().int().min(1)
-	),
-	limit: z.preprocess(
-		(value) => (value === undefined || value === '' ? 20 : value),
-		z.coerce.number().int().min(1).max(50)
-	)
-});
+const searchQuerySchema = z
+	.object({
+		q: z.string().optional().default(''),
+		playstyle: z.array(z.string()).optional(),
+		alignments: z.array(z.string()).optional(),
+		biomes: z.array(z.string()).optional(),
+		tags: z.array(z.string()).optional(),
+		authorUsername: z.string().trim().optional(),
+		adventuresMin: optionalAdventureCount,
+		adventuresMax: optionalAdventureCount,
+		levelMin: optionalInt,
+		levelMax: optionalInt,
+		sort: z.string().optional().default('relevance'),
+		page: z.preprocess(
+			(value) => (value === undefined || value === '' ? 1 : value),
+			z.coerce.number().int().min(1)
+		),
+		limit: z.preprocess(
+			(value) => (value === undefined || value === '' ? 20 : value),
+			z.coerce.number().int().min(1).max(50)
+		)
+	})
+	.refine(
+		(data) =>
+			data.adventuresMin === undefined ||
+			data.adventuresMax === undefined ||
+			data.adventuresMax >= data.adventuresMin,
+		{ message: 'adventuresMax must be greater than or equal to adventuresMin' }
+	);
 
 export async function search(req: Request, res: Response, next: NextFunction): Promise<void> {
 	try {
@@ -60,7 +69,8 @@ export async function search(req: Request, res: Response, next: NextFunction): P
 			tags: parseListParam(req.query.tags),
 			authorUsername:
 				typeof req.query.authorUsername === 'string' ? req.query.authorUsername : undefined,
-			numberOfAdventures: req.query.numberOfAdventures,
+			adventuresMin: req.query.adventuresMin,
+			adventuresMax: req.query.adventuresMax,
 			levelMin: req.query.levelMin,
 			levelMax: req.query.levelMax,
 			sort: typeof req.query.sort === 'string' ? req.query.sort : 'relevance',
@@ -78,9 +88,8 @@ export async function search(req: Request, res: Response, next: NextFunction): P
 			...(parsed.biomes ? { biomes: parsed.biomes } : {}),
 			...(parsed.tags ? { tags: parsed.tags } : {}),
 			...(parsed.authorUsername ? { authorUsername: parsed.authorUsername } : {}),
-			...(parsed.numberOfAdventures !== undefined
-				? { numberOfAdventures: parsed.numberOfAdventures }
-				: {}),
+			...(parsed.adventuresMin !== undefined ? { adventuresMin: parsed.adventuresMin } : {}),
+			...(parsed.adventuresMax !== undefined ? { adventuresMax: parsed.adventuresMax } : {}),
 			...(parsed.levelMin !== undefined ? { levelMin: parsed.levelMin } : {}),
 			...(parsed.levelMax !== undefined ? { levelMax: parsed.levelMax } : {})
 		});

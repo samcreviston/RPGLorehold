@@ -4,6 +4,52 @@
 	color: var(--base-slate-black);
 }
 
+.creator-mode-tabs {
+	display: flex;
+	gap: var(--space-6);
+	border-bottom: 1px solid rgba(192, 161, 119, 0.45);
+	margin-bottom: var(--space-2);
+}
+
+.creator-mode-tab {
+	appearance: none;
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	border-radius: 0;
+	margin-bottom: -1px;
+	padding: var(--space-2) 0;
+	font-family: var(--Fira-heading-font);
+	font-size: 1.05rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: rgba(20, 20, 20, 0.55);
+	cursor: pointer;
+	max-width: none;
+}
+
+.creator-mode-tab:hover,
+.creator-mode-tab:focus-visible {
+	color: var(--base-slate-black);
+	outline: none;
+}
+
+.creator-mode-tab--active {
+	color: var(--primary-purple);
+	border-bottom-color: var(--primary-tan);
+}
+
+.creator-preview-empty {
+	margin: var(--space-10) auto;
+	max-width: 36rem;
+	text-align: center;
+	font-family: var(--sorts-body-font);
+	font-style: italic;
+	font-size: 1.15rem;
+	line-height: 1.6;
+	color: rgba(20, 20, 20, 0.7);
+}
+
 .creator-page h1,
 .creator-page h2,
 .creator-page h3,
@@ -21,7 +67,7 @@
 .creator-page select,
 .creator-page input,
 .creator-page textarea,
-.creator-page button {
+.creator-page button:not(.creator-mode-tab) {
 	max-width: none;
 	background: rgba(255, 255, 255, 0.92);
 	color: var(--base-slate-black);
@@ -37,14 +83,14 @@
 	color: rgba(20, 20, 20, 0.55);
 }
 
-/* White text only on purple surfaces */
-.creator-page .content-filter-chip--selected,
-.creator-page .content-result-item--selected,
-.creator-page .content-connect-button,
-.creator-page .lair-chat-send-button,
-.creator-page .story-block-link-content-button,
-.creator-page .module-save-draft-button,
-.creator-page .module-publish-button {
+/* White text only on purple surfaces (must beat button:not(.creator-mode-tab)) */
+.creator-page button.content-filter-chip--selected,
+.creator-page button.content-result-item--selected,
+.creator-page button.content-connect-button,
+.creator-page button.lair-chat-send-button,
+.creator-page button.story-block-link-content-button,
+.creator-page button.module-save-draft-button,
+.creator-page button.module-publish-button {
 	background: var(--primary-purple);
 	border-color: var(--primary-purple);
 	color: var(--accent2-white);

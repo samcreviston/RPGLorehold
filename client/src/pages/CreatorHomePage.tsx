@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { listModules } from '../api/modules';
 import type { ModuleDocument } from '../types/module';
 import usePageMeta from '../hooks/usePageMeta';
+import { clearLastCreatorModuleId } from '../utils/lastCreatorModule';
 import './creator-home-page.css';
 
 function formatDate(value: string): string {
@@ -67,7 +68,14 @@ function CreatorHomePage() {
 			<h1>Creator Home</h1>
 			<p>Your in-progress and published modules.</p>
 
-			<button type="button" className="primary-action" onClick={() => navigate('/creator')}>
+			<button
+				type="button"
+				className="primary-action"
+				onClick={() => {
+					clearLastCreatorModuleId();
+					navigate('/creator');
+				}}
+			>
 				Create Content
 			</button>
 

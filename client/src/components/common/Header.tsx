@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { getLastCreatorModuleId } from '../../utils/lastCreatorModule';
 import '../../styles/layout.css';
 
 type NavigationLink = {
@@ -9,17 +10,21 @@ type NavigationLink = {
 
 function Header() {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const lastCreatorModuleId = getLastCreatorModuleId();
+	const creatorPath = lastCreatorModuleId
+		? `/creator?moduleId=${encodeURIComponent(lastCreatorModuleId)}`
+		: '/creator';
 
 	const navigationLinks = useMemo<NavigationLink[]>(
 		() => [
 			{ label: 'Home', path: '/' },
 			{ label: 'Search', path: '/search' },
-			{ label: 'Creator', path: '/creator' },
+			{ label: 'Creator', path: creatorPath },
 			{ label: 'Creator Home', path: '/creator/home' },
 			{ label: 'DM Home', path: '/dm-home' },
 			{ label: 'Account', path: '/account' }
 		],
-		[]
+		[creatorPath]
 	);
 
 	return (

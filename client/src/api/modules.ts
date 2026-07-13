@@ -31,6 +31,15 @@ export async function getModule(id: string): Promise<ModuleDocument> {
 	return data.module;
 }
 
+export type PublishedModuleResponse = {
+	module: ModuleDocument;
+	authorUsername: string;
+};
+
+export async function getPublishedModule(id: string): Promise<PublishedModuleResponse> {
+	return apiRequest<PublishedModuleResponse>(`/modules/published/${id}`);
+}
+
 export async function publishModule(
 	payload: ModuleUpsertPayload,
 	id?: string | null

@@ -61,8 +61,11 @@ function buildFilter(query: SearchModulesQuery): string | undefined {
 		parts.push(`authorUsername = ${quoteFilterValue(query.authorUsername)}`);
 	}
 
-	if (typeof query.numberOfAdventures === 'number') {
-		parts.push(`numberOfAdventures = ${query.numberOfAdventures}`);
+	if (typeof query.adventuresMin === 'number') {
+		parts.push(`numberOfAdventures >= ${query.adventuresMin}`);
+	}
+	if (typeof query.adventuresMax === 'number') {
+		parts.push(`numberOfAdventures <= ${query.adventuresMax}`);
 	}
 
 	if (typeof query.levelMin === 'number') {

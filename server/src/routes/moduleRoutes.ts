@@ -4,6 +4,8 @@ import { requireAuth } from '../middleware/authMiddleware.js';
 
 const moduleRoutes = Router();
 
+moduleRoutes.get('/published/:id', moduleController.getPublishedModule);
+
 moduleRoutes.use(requireAuth);
 
 moduleRoutes.get('/', moduleController.listModules);

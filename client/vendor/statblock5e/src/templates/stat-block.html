@@ -18,8 +18,6 @@
     background: #FDF1DC;
     padding: 0.6em;
     padding-bottom: 0.5em;
-    /* Extra left padding so property-line hanging indent (text-indent: -1em) is not clipped */
-    padding-left: 1.15em;
     border: 1px #DDD solid;
     box-shadow: 0 0 1.5em #867453;
 
@@ -32,11 +30,11 @@
     margin-right: 2px;
 
     /* This is possibly overriden by next CSS rule. */
-    width: 400px;
+    width: 328px;
 
-    -webkit-columns: 400px;
-       -moz-columns: 400px;
-            columns: 400px;
+    -webkit-columns: 328px;
+       -moz-columns: 328px;
+            columns: 328px;
     -webkit-column-gap: 40px;
        -moz-column-gap: 40px;
             column-gap: 40px;
@@ -52,8 +50,8 @@
   }
 
   :host([data-two-column]) #content-wrap {
-    /* One column is 400px and the gap between them is 40px. */
-    width: 840px;
+    /* One column is 328px and the gap between them is 40px. */
+    width: 696px;
   }
 
   ::slotted(h3) {
