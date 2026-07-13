@@ -2,12 +2,20 @@ import { useEffect, useEffectEvent, useRef, useState, type MutableRefObject } fr
 import { useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
 import CreatureStatBlock from '../../components/content/CreatureStatBlock';
+import Open5eDetailCard from '../../components/content/Open5eDetailCard';
 import StoryBlockEditor, {
 	type PendingContentLink,
 	type StoryBlockEditorHandle
 } from '../../components/editor/StoryBlockEditor';
 import type { MappedCreatureStatblock, Open5eCreature } from '../../lib/open5e/creatureTypes';
+import {
+	findResultByContentKey,
+	resolveContentKey,
+	type Open5eKeyedItem
+} from '../../lib/open5e/findByDocumentKey';
 import { mapOpen5eCreatureToStatblock } from '../../lib/open5e/mapOpen5eCreatureToStatblock';
+import { mapOpen5eItemToDetailView } from '../../lib/open5e/mapOpen5eItemToDetailView';
+import type { Open5eDetailViewModel } from '../../lib/open5e/open5eDetailTypes';
 import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
 import './module-create-template.css';
 
@@ -142,7 +150,19 @@ type ContentManagerResult = {
 	slug?: string;
 	objectModel?: string;
 	detailPath?: string;
+	contentKey?: string;
+	raw?: Open5eKeyedItem;
 };
+
+const catalogKeyFilterTypes = new Set<ContentTypeFilter>([
+	'armor',
+	'weapons',
+	'conditions',
+	'spell schools',
+	'classes',
+	'environments',
+	'services'
+]);
 
 function isCreatureResult(result: ContentManagerResult): boolean {
 	const model = result.objectModel?.toLowerCase() ?? '';
@@ -152,6 +172,28 @@ function isCreatureResult(result: ContentManagerResult): boolean {
 
 function buildCreatureContentLink(name: string, documentKey: string): string {
 	return `https://api.open5e.com/v2/creatures/?name__iexact=${encodeURIComponent(name)}&document__key__in=${encodeURIComponent(documentKey)}`;
+}
+
+function buildContentSearchLink(
+	filter: ContentTypeFilter,
+	selectedName: string,
+	result: ContentManagerResult
+): string {
+	if (filter !== 'all' && filter !== 'creatures') {
+		const endpoint = open5eEndpointByFilter[filter];
+		if (filter === 'abilities') {
+			return `https://api.open5e.com/v2/abilities/?fields=key,descriptions,name,document&name__icontains=${encodeURIComponent(selectedName)}`;
+		}
+		return `https://api.open5e.com/v2/${endpoint}/?name__icontains=${encodeURIComponent(selectedName)}`;
+	}
+
+	const path = result.detailPath?.replace(/\/[^/]+\/?$/, '/') ?? '';
+	const endpoint = path.split('/')[0];
+	if (endpoint) {
+		return `https://api.open5e.com/v2/${endpoint}/?name__icontains=${encodeURIComponent(selectedName)}`;
+	}
+
+	return `https://api.open5e.com/v2/search/?query=${encodeURIComponent(selectedName)}`;
 }
 
 function toOpen5eProxyPath(href: string): string | null {
@@ -168,6 +210,21 @@ function toOpen5eProxyPath(href: string): string | null {
 		}
 		return null;
 	}
+}
+
+function isCreatureDeepLink(href: string): boolean {
+	return href.includes('/creatures/') && href.includes('name__iexact=');
+}
+
+function kindHintForResult(filter: ContentTypeFilter, result: ContentManagerResult): string {
+	if (filter !== 'all') {
+		return filter === 'magic items'
+			? 'magicitems'
+			: filter === 'spell schools'
+				? 'spellschools'
+				: filter;
+	}
+	return result.objectModel ?? result.detailPath ?? '';
 }
 
 type ChatMessage = {
@@ -201,13 +258,19 @@ function ModuleCreateTemplate() {
 	const [creatureDetailStatus, setCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 	const [creatureDetailError, setCreatureDetailError] = useState('');
 	const [selectedCreatureDocumentKey, setSelectedCreatureDocumentKey] = useState('');
+	const [selectedCreatureContentKey, setSelectedCreatureContentKey] = useState('');
 	const [pendingContentLink, setPendingContentLink] = useState<PendingContentLink | null>(null);
 	const contentSearchInputRef = useRef<HTMLInputElement | null>(null);
 	const storyEditorRefs = useRef<Record<string, StoryBlockEditorHandle | null>>({});
 	const contentWindowFetchRef = useRef<AbortController | null>(null);
 	const [contentWindowStatus, setContentWindowStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 	const [contentWindowCreature, setContentWindowCreature] = useState<MappedCreatureStatblock | null>(null);
+	const [contentWindowDetail, setContentWindowDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [contentWindowError, setContentWindowError] = useState('');
+	const [contentConnectError, setContentConnectError] = useState('');
+	const [nonCreatureDetail, setNonCreatureDetail] = useState<Open5eDetailViewModel | null>(null);
+	const [nonCreatureDetailStatus, setNonCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+	const [nonCreatureDetailError, setNonCreatureDetailError] = useState('');
 	const [chatDraft, setChatDraft] = useState('');
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
 		{
@@ -547,22 +610,15 @@ function ModuleCreateTemplate() {
 		const controller = new AbortController();
 		setContentSearchStatus('loading');
 		const timeoutId = window.setTimeout(async () => {
-			const usesCatalogKeyFilter =
-				selectedContentFilter === 'armor' ||
-				selectedContentFilter === 'weapons' ||
-				selectedContentFilter === 'conditions' ||
-				selectedContentFilter === 'spell schools' ||
-				selectedContentFilter === 'classes' ||
-				selectedContentFilter === 'environments' ||
-				selectedContentFilter === 'services';
+			const usesCatalogKeyFilter = catalogKeyFilterTypes.has(selectedContentFilter);
 
 			const path =
 				selectedContentFilter === 'all'
 					? `search/?query=${encodeURIComponent(query)}`
 					: selectedContentFilter === 'abilities'
-						? `${open5eEndpointByFilter.abilities}/?fields=key,descriptions,name`
+						? `${open5eEndpointByFilter.abilities}/?fields=key,descriptions,name,document`
 						: usesCatalogKeyFilter
-							? `${open5eEndpointByFilter[selectedContentFilter]}/?exclude=document`
+							? `${open5eEndpointByFilter[selectedContentFilter]}/`
 							: `${open5eEndpointByFilter[selectedContentFilter]}/?name__icontains=${encodeURIComponent(query)}`;
 
 			try {
@@ -571,15 +627,7 @@ function ModuleCreateTemplate() {
 				console.log(data);
 
 				const searchLower = query.toLowerCase();
-				const rawResults = (data.results ?? []) as Array<{
-					key?: string;
-					object_pk?: string;
-					slug?: string;
-					name?: string;
-					object_name?: string;
-					object_model?: string;
-					route?: string;
-				}>;
+				const rawResults = (data.results ?? []) as Open5eKeyedItem[];
 
 				// Some Open5e list endpoints return the full catalog; filter client-side.
 				const catalogEndpoints = [
@@ -597,43 +645,61 @@ function ModuleCreateTemplate() {
 					selectedContentFilter === 'abilities'
 						? rawResults.filter((item) => (item.name ?? '').toLowerCase().includes(searchLower))
 						: usesCatalogKeyFilter || isCatalogEndpoint
-							? rawResults.filter((item) => (item.key ?? '').toLowerCase().includes(searchLower))
+							? rawResults.filter((item) => (String(item.key ?? '')).toLowerCase().includes(searchLower))
 							: rawResults;
 
 				const results: ContentManagerResult[] = sourceResults.map((entry, index) => {
-					const slugOrKey = entry.slug ?? entry.object_pk ?? entry.key ?? String(index);
-					const route = entry.route?.replace(/^v2\//, '') ?? '';
+					const slugOrKey =
+						(typeof entry.slug === 'string' ? entry.slug : undefined) ??
+						(typeof entry.object_pk === 'string' ? entry.object_pk : undefined) ??
+						(typeof entry.key === 'string' ? entry.key : undefined) ??
+						String(index);
+					const route =
+						typeof entry.route === 'string' ? entry.route.replace(/^v2\//, '') : '';
+					const objectModel =
+						typeof entry.object_model === 'string' ? entry.object_model : undefined;
 					const inferredCreature =
 						selectedContentFilter === 'creatures' ||
-						entry.object_model?.toLowerCase() === 'creature' ||
+						objectModel?.toLowerCase() === 'creature' ||
 						route.includes('creatures');
 
-					const objectModel =
-						entry.object_model ??
+					const resolvedObjectModel =
+						objectModel ??
 						(selectedContentFilter === 'creatures'
 							? 'Creature'
 							: selectedContentFilter === 'armor'
 								? 'Armor'
 								: selectedContentFilter === 'weapons'
 									? 'Weapon'
-									: undefined);
+									: selectedContentFilter === 'items'
+										? 'Item'
+										: selectedContentFilter === 'magic items'
+											? 'MagicItem'
+											: selectedContentFilter === 'spells'
+												? 'Spell'
+												: undefined);
 
 					const detailPath = inferredCreature
 						? `creatures/${slugOrKey}/`
 						: route
 							? `${route.replace(/\/?$/, '/')}${slugOrKey}/`
-							: selectedContentFilter === 'armor'
-								? `armor/${slugOrKey}/`
-								: selectedContentFilter === 'weapons'
-									? `weapons/${slugOrKey}/`
-									: undefined;
+							: selectedContentFilter !== 'all'
+								? `${open5eEndpointByFilter[selectedContentFilter]}/${slugOrKey}/`
+								: undefined;
+
+					const contentKey = resolveContentKey(entry);
 
 					return {
 						id: slugOrKey,
-						name: entry.name ?? entry.object_name ?? 'Unknown',
+						name:
+							(typeof entry.name === 'string' ? entry.name : undefined) ??
+							(typeof entry.object_name === 'string' ? entry.object_name : undefined) ??
+							'Unknown',
 						slug: slugOrKey,
-						...(objectModel ? { objectModel } : {}),
-						...(detailPath ? { detailPath } : {})
+						raw: entry,
+						...(resolvedObjectModel ? { objectModel: resolvedObjectModel } : {}),
+						...(detailPath ? { detailPath } : {}),
+						...(contentKey ? { contentKey } : {})
 					};
 				});
 
@@ -668,29 +734,73 @@ function ModuleCreateTemplate() {
 		setCreatureStatblock(null);
 		setCreatureDetailError('');
 		setSelectedCreatureDocumentKey('');
+		setSelectedCreatureContentKey('');
+		setContentConnectError('');
+		setNonCreatureDetail(null);
+		setNonCreatureDetailError('');
+		setNonCreatureDetailStatus('idle');
 
-		if (!isCreatureResult(result)) {
-			setCreatureDetailStatus('idle');
+		if (isCreatureResult(result)) {
+			const detailPath = result.detailPath ?? `creatures/${result.slug ?? result.id}/`;
+			setCreatureDetailStatus('loading');
+
+			void (async () => {
+				try {
+					const response = await fetch(`/open5e-api/${detailPath}`);
+					if (!response.ok) {
+						throw new Error(`Failed to load creature (${response.status})`);
+					}
+					const data = (await response.json()) as Open5eCreature & Open5eKeyedItem;
+					setSelectedCreatureDocumentKey(data.document?.key ?? '');
+					setSelectedCreatureContentKey(resolveContentKey(data));
+					setCreatureStatblock(mapOpen5eCreatureToStatblock(data));
+					setCreatureDetailStatus('idle');
+				} catch (error) {
+					console.error(error);
+					setCreatureDetailStatus('error');
+					setCreatureDetailError(error instanceof Error ? error.message : 'Failed to load creature.');
+				}
+			})();
 			return;
 		}
 
-		const detailPath = result.detailPath ?? `creatures/${result.slug ?? result.id}/`;
-		setCreatureDetailStatus('loading');
+		setCreatureDetailStatus('idle');
+		const kindHint = kindHintForResult(selectedContentFilter, result);
 
+		if (result.raw && (result.raw.desc != null || result.raw.descriptions != null || result.raw.name)) {
+			setNonCreatureDetail(mapOpen5eItemToDetailView(result.raw, kindHint));
+			return;
+		}
+
+		if (!result.detailPath) {
+			setNonCreatureDetailStatus('error');
+			setNonCreatureDetailError('No detail available for this result.');
+			return;
+		}
+
+		setNonCreatureDetailStatus('loading');
 		void (async () => {
 			try {
-				const response = await fetch(`/open5e-api/${detailPath}`);
+				const response = await fetch(`/open5e-api/${result.detailPath}`);
 				if (!response.ok) {
-					throw new Error(`Failed to load creature (${response.status})`);
+					throw new Error(`Failed to load content (${response.status})`);
 				}
-				const data = (await response.json()) as Open5eCreature;
-				setSelectedCreatureDocumentKey(data.document?.key ?? '');
-				setCreatureStatblock(mapOpen5eCreatureToStatblock(data));
-				setCreatureDetailStatus('idle');
+				const data = (await response.json()) as Open5eKeyedItem;
+				setNonCreatureDetail(mapOpen5eItemToDetailView(data, kindHint));
+				setSelectedContentResult((previous) =>
+					previous
+						? {
+								...previous,
+								raw: data,
+								...(resolveContentKey(data) ? { contentKey: resolveContentKey(data) } : {})
+							}
+						: previous
+				);
+				setNonCreatureDetailStatus('idle');
 			} catch (error) {
 				console.error(error);
-				setCreatureDetailStatus('error');
-				setCreatureDetailError(error instanceof Error ? error.message : 'Failed to load creature.');
+				setNonCreatureDetailStatus('error');
+				setNonCreatureDetailError(error instanceof Error ? error.message : 'Failed to load content.');
 			}
 		})();
 	};
@@ -702,6 +812,11 @@ function ModuleCreateTemplate() {
 		setCreatureDetailStatus('idle');
 		setCreatureDetailError('');
 		setSelectedCreatureDocumentKey('');
+		setSelectedCreatureContentKey('');
+		setContentConnectError('');
+		setNonCreatureDetail(null);
+		setNonCreatureDetailStatus('idle');
+		setNonCreatureDetailError('');
 	};
 
 	const requestLinkContent = (pending: PendingContentLink) => {
@@ -722,34 +837,59 @@ function ModuleCreateTemplate() {
 		if (!pendingContentLink || !selectedContentResult) {
 			return;
 		}
-		if (!isCreatureResult(selectedContentResult) || !selectedCreatureDocumentKey) {
-			console.warn('Content linking currently supports creatures with a document key only.');
-			return;
+
+		setContentConnectError('');
+
+		let href = '';
+		let contentKey = '';
+
+		if (isCreatureResult(selectedContentResult)) {
+			const documentKey = selectedCreatureDocumentKey;
+			contentKey = selectedCreatureContentKey || selectedContentResult.contentKey || documentKey;
+			if (!contentKey && !documentKey) {
+				setContentConnectError('No key to save.');
+				return;
+			}
+			if (!documentKey) {
+				setContentConnectError('No key to save.');
+				return;
+			}
+			href = buildCreatureContentLink(selectedContentResult.name, documentKey);
+			contentKey = selectedCreatureContentKey || selectedContentResult.contentKey || documentKey;
+		} else {
+			contentKey = selectedContentResult.contentKey || resolveContentKey(selectedContentResult.raw ?? {});
+			if (!contentKey) {
+				setContentConnectError('No key to save.');
+				return;
+			}
+			href = buildContentSearchLink(selectedContentFilter, selectedContentResult.name, selectedContentResult);
 		}
 
-		const href = buildCreatureContentLink(selectedContentResult.name, selectedCreatureDocumentKey);
 		const editor = storyEditorRefs.current[pendingContentLink.blockId];
 		const applied = editor?.applyContentLink(
 			href,
 			pendingContentLink.from,
 			pendingContentLink.to,
-			pendingContentLink.text
+			pendingContentLink.text,
+			contentKey
 		);
 
 		if (applied) {
 			setPendingContentLink(null);
+			setContentConnectError('');
 		}
 	};
 
-	const openContentLinkInWindow = useEffectEvent((href: string) => {
+	const openContentLinkInWindow = useEffectEvent((href: string, contentKey?: string) => {
 		setIsSidebarToolsOpen(true);
 		setIsContentWindowOpen(true);
 
 		const proxyPath = toOpen5eProxyPath(href);
-		if (!proxyPath || !proxyPath.includes('creatures')) {
+		if (!proxyPath) {
 			setContentWindowCreature(null);
+			setContentWindowDetail(null);
 			setContentWindowStatus('error');
-			setContentWindowError('Only creature links can be viewed in the Content Window right now.');
+			setContentWindowError('Invalid content link.');
 			return;
 		}
 
@@ -760,6 +900,7 @@ function ModuleCreateTemplate() {
 		setContentWindowStatus('loading');
 		setContentWindowError('');
 		setContentWindowCreature(null);
+		setContentWindowDetail(null);
 
 		void (async () => {
 			try {
@@ -767,12 +908,58 @@ function ModuleCreateTemplate() {
 				if (!response.ok) {
 					throw new Error(`Failed to load content (${response.status})`);
 				}
-				const data = (await response.json()) as { results?: Open5eCreature[] };
-				const creature = data.results?.[0];
-				if (!creature) {
-					throw new Error('No creature found for that link.');
+				const data = (await response.json()) as { results?: Array<Open5eCreature & Open5eKeyedItem> };
+				let results = data.results ?? [];
+
+				if (isCreatureDeepLink(href)) {
+					const creature = contentKey
+						? findResultByContentKey(results, contentKey) ?? results[0]
+						: results[0];
+					if (!creature) {
+						throw new Error('No creature found for that link.');
+					}
+					setContentWindowCreature(mapOpen5eCreatureToStatblock(creature));
+					setContentWindowStatus('idle');
+					return;
 				}
-				setContentWindowCreature(mapOpen5eCreatureToStatblock(creature));
+
+				if (!contentKey) {
+					throw new Error('Missing content key on this link.');
+				}
+
+				let matched = findResultByContentKey(results, contentKey);
+				if (!matched) {
+					const retryUrl = new URL(proxyPath, window.location.origin);
+					retryUrl.searchParams.delete('name__icontains');
+					const retryPath = `${retryUrl.pathname}${retryUrl.search}`;
+					if (retryPath !== proxyPath) {
+						const retryResponse = await fetch(retryPath, { signal: controller.signal });
+						if (!retryResponse.ok) {
+							throw new Error(`Failed to load content (${retryResponse.status})`);
+						}
+						const retryData = (await retryResponse.json()) as {
+							results?: Array<Open5eCreature & Open5eKeyedItem>;
+						};
+						results = retryData.results ?? [];
+						matched = findResultByContentKey(results, contentKey);
+					}
+				}
+
+				if (!matched) {
+					throw new Error('No result matched the saved content key.');
+				}
+
+				const looksLikeCreature =
+					proxyPath.includes('creatures') ||
+					Boolean(
+						(matched as Open5eCreature).challenge_rating != null || (matched as Open5eCreature).cr != null
+					);
+
+				if (looksLikeCreature) {
+					setContentWindowCreature(mapOpen5eCreatureToStatblock(matched as Open5eCreature));
+				} else {
+					setContentWindowDetail(mapOpen5eItemToDetailView(matched, proxyPath));
+				}
 				setContentWindowStatus('idle');
 			} catch (error) {
 				if ((error as Error).name === 'AbortError') {
@@ -780,6 +967,7 @@ function ModuleCreateTemplate() {
 				}
 				console.error(error);
 				setContentWindowCreature(null);
+				setContentWindowDetail(null);
 				setContentWindowStatus('error');
 				setContentWindowError(error instanceof Error ? error.message : 'Failed to load content.');
 			}
@@ -897,14 +1085,16 @@ function ModuleCreateTemplate() {
 													disabled={
 														!pendingContentLink ||
 														!selectedContentResult ||
-														!isCreatureResult(selectedContentResult) ||
-														!selectedCreatureDocumentKey ||
-														creatureDetailStatus === 'loading'
+														(isCreatureResult(selectedContentResult) &&
+															creatureDetailStatus === 'loading')
 													}
 												>
 													connect to text
 												</button>
 											</div>
+											{contentConnectError ? (
+												<p className="content-results-empty">{contentConnectError}</p>
+											) : null}
 											{selectedContentResult && isCreatureResult(selectedContentResult) ? (
 												creatureDetailStatus === 'loading' ? (
 													<p className="content-results-empty">Loading stat block…</p>
@@ -915,8 +1105,14 @@ function ModuleCreateTemplate() {
 												) : (
 													<h5>{selectedContentResult.name}</h5>
 												)
+											) : nonCreatureDetailStatus === 'loading' ? (
+												<p className="content-results-empty">Loading content…</p>
+											) : nonCreatureDetailStatus === 'error' ? (
+												<p className="content-results-empty">{nonCreatureDetailError}</p>
+											) : nonCreatureDetail ? (
+												<Open5eDetailCard detail={nonCreatureDetail} />
 											) : (
-												<h5>{selectedContentResult.name}</h5>
+												<h5>{selectedContentResult?.name}</h5>
 											)}
 										</div>
 									) : (
@@ -974,14 +1170,16 @@ function ModuleCreateTemplate() {
 								{isContentWindowOpen ? (
 									<div className="content-window-body">
 										{contentWindowStatus === 'loading' ? (
-											<p className="content-results-empty">Loading creature…</p>
+											<p className="content-results-empty">Loading content…</p>
 										) : contentWindowStatus === 'error' ? (
 											<p className="content-results-empty">{contentWindowError}</p>
 										) : contentWindowCreature ? (
 											<CreatureStatBlock creature={contentWindowCreature} />
+										) : contentWindowDetail ? (
+											<Open5eDetailCard detail={contentWindowDetail} />
 										) : (
 											<p className="content-results-empty">
-												Click a linked creature tag to view it here.
+												Click a linked content tag to view it here.
 											</p>
 										)}
 									</div>

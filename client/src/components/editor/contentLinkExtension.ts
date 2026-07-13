@@ -5,10 +5,11 @@ import ContentLinkView from './ContentLinkView';
 export type ContentLinkAttributes = {
 	href: string;
 	label: string;
+	contentKey?: string;
 };
 
 export type ContentLinkOptions = {
-	onOpenContentLink?: ((href: string) => void) | undefined;
+	onOpenContentLink?: ((href: string, contentKey?: string) => void) | undefined;
 };
 
 declare module '@tiptap/core' {
@@ -48,6 +49,17 @@ export const ContentLink = Node.create<ContentLinkOptions>({
 					clone.querySelectorAll('.content-link-tag__remove').forEach((node) => node.remove());
 					return clone.textContent?.trim() ?? '';
 				}
+			},
+			contentKey: {
+				default: '',
+				parseHTML: (element) =>
+					element.getAttribute('data-content-key') ?? element.getAttribute('data-document-key') ?? '',
+				renderHTML: (attributes) =>
+					attributes.contentKey
+						? {
+								'data-content-key': attributes.contentKey
+							}
+						: {}
 			}
 		};
 	},
@@ -61,7 +73,8 @@ export const ContentLink = Node.create<ContentLinkOptions>({
 			'span',
 			mergeAttributes(HTMLAttributes, {
 				class: 'content-link-tag',
-				'data-content-link': node.attrs.href
+				'data-content-link': node.attrs.href,
+				...(node.attrs.contentKey ? { 'data-content-key': node.attrs.contentKey } : {})
 			}),
 			node.attrs.label
 		];

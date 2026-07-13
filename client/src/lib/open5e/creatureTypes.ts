@@ -4,6 +4,7 @@ export type Open5eNamedDesc = {
 };
 
 export type Open5eCreature = {
+	key?: string;
 	slug?: string;
 	name?: string;
 	document?: {

@@ -18,7 +18,13 @@ export type PendingContentLink = {
 };
 
 export type StoryBlockEditorHandle = {
-	applyContentLink: (href: string, from: number, to: number, label: string) => boolean;
+	applyContentLink: (
+		href: string,
+		from: number,
+		to: number,
+		label: string,
+		contentKey?: string
+	) => boolean;
 };
 
 type StoryBlockEditorProps = {
@@ -28,7 +34,7 @@ type StoryBlockEditorProps = {
 	blockId: string;
 	onContentChange: (html: string) => void;
 	onRequestLinkContent: (pending: PendingContentLink) => void;
-	onOpenContentLink: (href: string) => void;
+	onOpenContentLink: (href: string, contentKey?: string) => void;
 };
 
 function normalizeEditorHtml(value: string): string {
@@ -63,8 +69,8 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 					horizontalRule: false
 				}),
 				ContentLink.configure({
-					onOpenContentLink: (href) => {
-						onOpenContentLinkRef.current(href);
+					onOpenContentLink: (href, contentKey) => {
+						onOpenContentLinkRef.current(href, contentKey);
 					}
 				})
 			],
@@ -90,7 +96,7 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 		useImperativeHandle(
 			ref,
 			() => ({
-				applyContentLink: (href, from, to, label) => {
+				applyContentLink: (href, from, to, label, contentKey) => {
 					if (!editor) {
 						return false;
 					}
@@ -102,7 +108,11 @@ const StoryBlockEditor = forwardRef<StoryBlockEditorHandle, StoryBlockEditorProp
 							{ from, to },
 							{
 								type: 'contentLink',
-								attrs: { href, label }
+								attrs: {
+									href,
+									label,
+									...(contentKey ? { contentKey } : {})
+								}
 							}
 						)
 						.run();

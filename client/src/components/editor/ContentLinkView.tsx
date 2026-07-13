@@ -4,10 +4,16 @@ import type { ContentLinkOptions } from './contentLinkExtension';
 export default function ContentLinkView({ node, deleteNode, extension }: NodeViewProps) {
 	const href = String(node.attrs.href ?? '');
 	const label = String(node.attrs.label ?? '');
+	const contentKey = String(node.attrs.contentKey ?? node.attrs.documentKey ?? '');
 	const options = extension.options as ContentLinkOptions;
 
 	return (
-		<NodeViewWrapper as="span" className="content-link-tag" data-content-link={href}>
+		<NodeViewWrapper
+			as="span"
+			className="content-link-tag"
+			data-content-link={href}
+			{...(contentKey ? { 'data-content-key': contentKey } : {})}
+		>
 			<button
 				type="button"
 				className="content-link-tag__hit"
@@ -16,7 +22,7 @@ export default function ContentLinkView({ node, deleteNode, extension }: NodeVie
 					event.preventDefault();
 					event.stopPropagation();
 					console.log(href);
-					options.onOpenContentLink?.(href);
+					options.onOpenContentLink?.(href, contentKey || undefined);
 				}}
 			/>
 			<span className="content-link-tag__label">{label}</span>
