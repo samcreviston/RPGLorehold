@@ -18,23 +18,25 @@ const searchCategories: ReadonlyArray<{ key: SearchCategoryKey; heading: string;
 
 function SearchSort({ selectedCategory, onChange }: SearchSortProps) {
 	return (
-		<section className="search-nav" aria-label="Search category navigation">
-			{searchCategories.map((searchCategory) => (
-				<button
-					key={searchCategory.key}
-					type="button"
-					className={`search-nav__button ${
-						selectedCategory === searchCategory.key ? 'search-nav__button--active' : ''
-					}`}
-					onClick={() => onChange(searchCategory.key)}
-				>
-					<strong>{searchCategory.heading}</strong>
-					<p>{searchCategory.subCopy}</p>
-				</button>
-			))}
+		<section className="search-labeled-row" aria-label="Content type">
+			<p className="search-labeled-row__label">Content Type</p>
+			<div className="search-nav" role="group" aria-label="Search category navigation">
+				{searchCategories.map((searchCategory) => (
+					<button
+						key={searchCategory.key}
+						type="button"
+						className={`search-nav__button ${
+							selectedCategory === searchCategory.key ? 'search-nav__button--active' : ''
+						}`}
+						onClick={() => onChange(searchCategory.key)}
+					>
+						<strong>{searchCategory.heading}</strong>
+						<p>{searchCategory.subCopy}</p>
+					</button>
+				))}
+			</div>
 		</section>
 	);
 }
 
 export default SearchSort;
-

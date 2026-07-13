@@ -26,6 +26,8 @@ export type SearchModulesQuery = {
 	alignments?: string[];
 	biomes?: string[];
 	tags?: string[];
+	authorUsername?: string;
+	numberOfAdventures?: number;
 	levelMin?: number;
 	levelMax?: number;
 	sort?: string;

@@ -16,7 +16,10 @@
     "server"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w client\" \"npm run dev -w server\"",
+    "meili:up": "docker compose up -d meilisearch",
+    "meili:down": "docker compose stop meilisearch",
+    "dev": "npm run meili:up && concurrently -n client,server -c cyan,magenta \"npm run dev -w client\" \"npm run dev -w server\"",
+    "dev:apps": "concurrently -n client,server -c cyan,magenta \"npm run dev -w client\" \"npm run dev -w server\"",
     "build": "npm run build -w client && npm run build -w server",
     "test": "npm run test -w client && npm run test -w server",
     "test:e2e": "playwright test",

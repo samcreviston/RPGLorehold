@@ -1,11 +1,47 @@
 ﻿import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { searchModules, type ModuleSearchHit } from '../api/search';
+import { searchModules, type ModuleSearchHit, type SearchModulesParams } from '../api/search';
 import SearchBar from '../components/common/SearchBar';
+import SearchFilters, {
+	emptySearchFilters,
+	type SearchFilterValues
+} from '../components/search/SearchFilters';
 import SearchResults from '../components/search/SearchResults';
 import SearchSort, { type SearchCategoryKey } from '../components/search/SearchSort';
+import SearchSortBy from '../components/search/SearchSortBy';
 import usePageMeta from '../hooks/usePageMeta';
 import './search-page.css';
+
+function toSearchParams(filters: SearchFilterValues, sort: string, q: string): SearchModulesParams {
+	const params: SearchModulesParams = { q, limit: 20, sort };
+
+	if (filters.playstyle) {
+		params.playstyle = [filters.playstyle];
+	}
+	if (filters.alignment) {
+		params.alignments = [filters.alignment];
+	}
+	if (filters.biome) {
+		params.biomes = [filters.biome];
+	}
+	if (filters.tag.trim()) {
+		params.tags = [filters.tag.trim()];
+	}
+	if (filters.authorUsername.trim()) {
+		params.authorUsername = filters.authorUsername.trim();
+	}
+	if (filters.levelMin) {
+		params.levelMin = Number(filters.levelMin);
+	}
+	if (filters.levelMax) {
+		params.levelMax = Number(filters.levelMax);
+	}
+	if (filters.numberOfAdventures) {
+		params.numberOfAdventures = Number(filters.numberOfAdventures);
+	}
+
+	return params;
+}
 
 function SearchPage() {
 	usePageMeta({
@@ -19,6 +55,8 @@ function SearchPage() {
 	const [category, setCategory] = useState<SearchCategoryKey>('content');
 	const [query, setQuery] = useState(initialQuery);
 	const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
+	const [filters, setFilters] = useState<SearchFilterValues>(emptySearchFilters);
+	const [sort, setSort] = useState('relevance');
 	const [hits, setHits] = useState<ModuleSearchHit[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -42,7 +80,7 @@ function SearchPage() {
 		setLoading(true);
 		setError(null);
 
-		void searchModules({ q: submittedQuery, limit: 20 })
+		void searchModules(toSearchParams(filters, sort, submittedQuery))
 			.then((result) => {
 				if (cancelled) {
 					return;
@@ -67,7 +105,7 @@ function SearchPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [category, submittedQuery]);
+	}, [category, submittedQuery, filters, sort]);
 
 	function runSearch() {
 		const next = query.trim();
@@ -78,6 +116,8 @@ function SearchPage() {
 			setSearchParams({});
 		}
 	}
+
+	const controlsDisabled = category !== 'content';
 
 	const emptyMessage =
 		category !== 'content'
@@ -99,6 +139,8 @@ function SearchPage() {
 				onSubmit={runSearch}
 			/>
 			<SearchSort selectedCategory={category} onChange={setCategory} />
+			<SearchFilters values={filters} onChange={setFilters} disabled={controlsDisabled} />
+			<SearchSortBy value={sort} onChange={setSort} disabled={controlsDisabled} />
 			<SearchResults
 				hits={category === 'content' ? hits : []}
 				loading={category === 'content' ? loading : false}
