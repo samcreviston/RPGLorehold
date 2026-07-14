@@ -108,6 +108,20 @@
 	text-align: center;
 }
 
+.module-preview__dm-notes {
+	margin: 0;
+	padding: var(--space-3);
+	border: 1px solid rgba(33, 11, 44, 0.35);
+	border-radius: var(--radius-sm);
+	background: transparent;
+	font-style: italic;
+	font-size: 1.05rem;
+	line-height: 1.6;
+	text-align: left;
+	white-space: pre-wrap;
+	color: rgba(20, 20, 20, 0.85);
+}
+
 .module-preview__author {
 	margin: 0;
 	font-style: italic;

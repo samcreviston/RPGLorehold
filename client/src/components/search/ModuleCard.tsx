@@ -7,6 +7,8 @@ type SearchResultCardProps = {
 	flavorText: string;
 	isFavorited?: boolean;
 	onFavoriteToggle?: () => void;
+	onAddToCampaign?: () => void;
+	onView?: () => void;
 	onSelect?: () => void;
 };
 
@@ -37,6 +39,8 @@ function ModuleCard({
 	flavorText,
 	isFavorited = false,
 	onFavoriteToggle,
+	onAddToCampaign,
+	onView,
 	onSelect
 }: SearchResultCardProps) {
 	const interactive = Boolean(onSelect);
@@ -60,19 +64,47 @@ function ModuleCard({
 		>
 			<header className="search-result-card__header">
 				<h3>{contentName}</h3>
-				<button
-					type="button"
-					className={`search-result-card__favorite${isFavorited ? ' search-result-card__favorite--active' : ''}`}
-					aria-label={isFavorited ? `Unfavorite ${contentName}` : `Favorite ${contentName}`}
-					aria-pressed={isFavorited}
-					onClick={(event) => {
-						event.stopPropagation();
-						onFavoriteToggle?.();
-					}}
-				>
-					<span>Favorite</span>
-					<FavoriteStarIcon filled={isFavorited} />
-				</button>
+				<div className="search-result-card__actions">
+					{onView ? (
+						<button
+							type="button"
+							className="search-result-card__view"
+							onClick={(event) => {
+								event.stopPropagation();
+								onView();
+							}}
+						>
+							View
+						</button>
+					) : null}
+					{onAddToCampaign ? (
+						<button
+							type="button"
+							className="search-result-card__campaign-add"
+							aria-label={`Add ${contentName} to a Campaign`}
+							title="Add to a Campaign"
+							onClick={(event) => {
+								event.stopPropagation();
+								onAddToCampaign();
+							}}
+						>
+							+
+						</button>
+					) : null}
+					<button
+						type="button"
+						className={`search-result-card__favorite${isFavorited ? ' search-result-card__favorite--active' : ''}`}
+						aria-label={isFavorited ? `Unfavorite ${contentName}` : `Favorite ${contentName}`}
+						aria-pressed={isFavorited}
+						onClick={(event) => {
+							event.stopPropagation();
+							onFavoriteToggle?.();
+						}}
+					>
+						<span>Favorite</span>
+						<FavoriteStarIcon filled={isFavorited} />
+					</button>
+				</div>
 			</header>
 			<p className="search-result-card__attributes">{attributes}</p>
 			<p>{flavorText}</p>

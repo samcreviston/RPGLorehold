@@ -67,8 +67,8 @@ textarea,
 select {
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--color-border);
-	background: rgba(20, 20, 20, 0.72);
-	color: var(--color-text);
+	background: #fff;
+	color: var(--base-slate-black);
 }
 
 button:focus-visible,

@@ -11,6 +11,8 @@ type ModulePreviewViewProps = {
 	title: string;
 	authorName: string;
 	adventures: ModulePreviewAdventure[];
+	/** Optional DM-only notes shown under the module title. */
+	dmNotes?: string;
 	emptyMessage?: string;
 	/** When provided, uses an external Content Window instead of creating one. */
 	contentWindow?: ReturnType<typeof useContentWindow>;
@@ -20,14 +22,17 @@ function ModulePreviewView({
 	title,
 	authorName,
 	adventures,
+	dmNotes,
 	emptyMessage = 'No module content to display.',
 	contentWindow: externalContentWindow
 }: ModulePreviewViewProps) {
 	const internalContentWindow = useContentWindow();
 	const contentWindow = externalContentWindow ?? internalContentWindow;
 
+	const trimmedDmNotes = dmNotes?.trim() ?? '';
 	const hasContent =
 		title.trim().length > 0 ||
+		trimmedDmNotes.length > 0 ||
 		adventures.some((adventure) => adventure.blocks.some((block) => !isPreviewBlockEmpty(block)));
 
 	if (!hasContent) {
@@ -59,6 +64,9 @@ function ModulePreviewView({
 			>
 				<header className="module-preview__header">
 					<h2 className="module-preview__title">{title.trim() || 'Untitled Module'}</h2>
+					{trimmedDmNotes ? (
+						<p className="module-preview__dm-notes">{trimmedDmNotes}</p>
+					) : null}
 					<p className="module-preview__author">{authorName}</p>
 				</header>
 

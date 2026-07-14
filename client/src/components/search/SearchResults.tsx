@@ -10,6 +10,7 @@ type SearchResultsProps = {
 	favoriteIds?: Set<string>;
 	onSelectResult?: (moduleId: string) => void;
 	onFavoriteToggle?: (moduleId: string) => void;
+	onAddToCampaign?: (hit: ModuleSearchHit) => void;
 };
 
 function SearchResults({
@@ -19,7 +20,8 @@ function SearchResults({
 	emptyMessage,
 	favoriteIds,
 	onSelectResult,
-	onFavoriteToggle
+	onFavoriteToggle,
+	onAddToCampaign
 }: SearchResultsProps) {
 	return (
 		<section className="search-panel" aria-labelledby="search-results-heading">
@@ -36,6 +38,7 @@ function SearchResults({
 						flavorText={hit.flavorText}
 						isFavorited={favoriteIds?.has(hit.id) ?? false}
 						{...(onFavoriteToggle ? { onFavoriteToggle: () => onFavoriteToggle(hit.id) } : {})}
+						{...(onAddToCampaign ? { onAddToCampaign: () => onAddToCampaign(hit) } : {})}
 						{...(onSelectResult ? { onSelect: () => onSelectResult(hit.id) } : {})}
 					/>
 				))}

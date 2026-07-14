@@ -5,6 +5,10 @@ import { getPublishedModule } from '../api/modules';
 import { searchModules, type ModuleSearchHit, type SearchModulesParams } from '../api/search';
 import { useAuth } from '../auth/AuthContext';
 import SearchBar from '../components/common/SearchBar';
+import CampaignModulePickerDialog, {
+	type CampaignModuleSource
+} from '../components/campaign/CampaignModulePickerDialog';
+import CampaignAddedToast from '../components/campaign/CampaignAddedToast';
 import ModulePreviewView from '../components/module/ModulePreviewView';
 import SearchFilters, {
 	emptySearchFilters,
@@ -83,6 +87,8 @@ function SearchPage() {
 	const [viewAuthorUsername, setViewAuthorUsername] = useState('');
 	const [viewLoading, setViewLoading] = useState(false);
 	const [viewError, setViewError] = useState<string | null>(null);
+	const [campaignSource, setCampaignSource] = useState<CampaignModuleSource | null>(null);
+	const [addedToCampaignName, setAddedToCampaignName] = useState('');
 
 	useEffect(() => {
 		setQuery(searchParams.get('q') ?? '');
@@ -271,6 +277,19 @@ function SearchPage() {
 		}
 	}
 
+	function openCampaignPicker(hit: ModuleSearchHit) {
+		if (!isAuthenticated) {
+			navigate('/account', { state: { from: '/search' } });
+			return;
+		}
+		setCampaignSource({
+			id: hit.id,
+			title: hit.title,
+			startingLevel: hit.startingLevel,
+			endingLevel: hit.endingLevel
+		});
+	}
+
 	const controlsDisabled = category !== 'content';
 
 	const emptyMessage =
@@ -331,6 +350,7 @@ function SearchPage() {
 							favoriteIds={favoriteIds}
 							onSelectResult={openResult}
 							onFavoriteToggle={handleFavoriteToggle}
+							onAddToCampaign={openCampaignPicker}
 						/>
 					</>
 				) : (
@@ -356,6 +376,21 @@ function SearchPage() {
 					</section>
 				)}
 			</div>
+			<CampaignModulePickerDialog
+				isOpen={campaignSource !== null}
+				source={campaignSource}
+				onClose={() => setCampaignSource(null)}
+				onCampaignUpdated={(campaign) => {
+					setCampaignSource(null);
+					setAddedToCampaignName(campaign.title);
+				}}
+			/>
+			{addedToCampaignName ? (
+				<CampaignAddedToast
+					campaignName={addedToCampaignName}
+					onClose={() => setAddedToCampaignName('')}
+				/>
+			) : null}
 		</main>
 	);
 }
