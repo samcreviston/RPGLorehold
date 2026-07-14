@@ -1,7 +1,9 @@
 ﻿import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { addFavorite, listFavoriteModules, removeFavorite } from '../api/favorites';
 import { getPublishedModule } from '../api/modules';
 import { searchModules, type ModuleSearchHit, type SearchModulesParams } from '../api/search';
+import { useAuth } from '../auth/AuthContext';
 import SearchBar from '../components/common/SearchBar';
 import ModulePreviewView from '../components/module/ModulePreviewView';
 import SearchFilters, {
@@ -59,6 +61,8 @@ function SearchPage() {
 		path: '/search'
 	});
 
+	const navigate = useNavigate();
+	const { isAuthenticated, isLoading: authLoading } = useAuth();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const initialQuery = searchParams.get('q') ?? '';
 	const viewModuleId = searchParams.get('view')?.trim() ?? '';
@@ -73,6 +77,7 @@ function SearchPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [totalHits, setTotalHits] = useState(0);
+	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
 	const [viewedModule, setViewedModule] = useState<ModuleDocument | null>(null);
 	const [viewAuthorUsername, setViewAuthorUsername] = useState('');
@@ -89,6 +94,34 @@ function SearchPage() {
 			setPageTab('view');
 		}
 	}, [viewModuleId]);
+
+	useEffect(() => {
+		if (authLoading) {
+			return;
+		}
+
+		if (!isAuthenticated) {
+			setFavoriteIds(new Set());
+			return;
+		}
+
+		let cancelled = false;
+		void listFavoriteModules()
+			.then((items) => {
+				if (!cancelled) {
+					setFavoriteIds(new Set(items.map((item) => String(item.module._id))));
+				}
+			})
+			.catch(() => {
+				if (!cancelled) {
+					setFavoriteIds(new Set());
+				}
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [authLoading, isAuthenticated]);
 
 	useEffect(() => {
 		if (category !== 'content') {
@@ -202,6 +235,42 @@ function SearchPage() {
 		}
 	}
 
+	async function handleFavoriteToggle(moduleId: string) {
+		if (!isAuthenticated) {
+			navigate('/account', { state: { from: '/search' } });
+			return;
+		}
+
+		const currentlyFavorited = favoriteIds.has(moduleId);
+		setFavoriteIds((prev) => {
+			const next = new Set(prev);
+			if (currentlyFavorited) {
+				next.delete(moduleId);
+			} else {
+				next.add(moduleId);
+			}
+			return next;
+		});
+
+		try {
+			if (currentlyFavorited) {
+				await removeFavorite(moduleId);
+			} else {
+				await addFavorite(moduleId);
+			}
+		} catch {
+			setFavoriteIds((prev) => {
+				const next = new Set(prev);
+				if (currentlyFavorited) {
+					next.add(moduleId);
+				} else {
+					next.delete(moduleId);
+				}
+				return next;
+			});
+		}
+	}
+
 	const controlsDisabled = category !== 'content';
 
 	const emptyMessage =
@@ -259,7 +328,9 @@ function SearchPage() {
 							loading={category === 'content' ? loading : false}
 							error={category === 'content' ? error : null}
 							emptyMessage={emptyMessage}
+							favoriteIds={favoriteIds}
 							onSelectResult={openResult}
+							onFavoriteToggle={handleFavoriteToggle}
 						/>
 					</>
 				) : (

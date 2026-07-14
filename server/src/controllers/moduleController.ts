@@ -167,3 +167,53 @@ export async function deleteModule(
 		next(error);
 	}
 }
+
+export async function listFavoriteModules(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	try {
+		const userId = requireUserId(req);
+		const modules = await moduleService.listFavoriteModules(userId);
+		res.json({ modules });
+	} catch (error) {
+		next(error);
+	}
+}
+
+export async function addFavorite(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	try {
+		const userId = requireUserId(req);
+		const id = paramId(req.params.id);
+		const result = await moduleService.addFavorite(userId, id);
+		if (!result) {
+			throw new HttpError(404, 'Published module not found');
+		}
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
+export async function removeFavorite(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	try {
+		const userId = requireUserId(req);
+		const id = paramId(req.params.id);
+		const result = await moduleService.removeFavorite(userId, id);
+		if (!result) {
+			throw new HttpError(404, 'Published module not found');
+		}
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+}

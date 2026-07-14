@@ -215,3 +215,102 @@ export async function deleteModule(
 	removeModuleFromIndexBackground(moduleId);
 	return true;
 }
+
+export type FavoriteToggleResult = {
+	favorited: boolean;
+	favorites: number;
+};
+
+export type FavoriteModuleResult = {
+	module: ModuleDocument;
+	authorUsername: string;
+};
+
+export async function listFavoriteModules(userId: string): Promise<FavoriteModuleResult[]> {
+	const user = await User.findById(userId).select('favoriteModules').lean();
+	const favoriteIds = (user?.favoriteModules ?? []).map((id) => String(id));
+	if (favoriteIds.length === 0) {
+		return [];
+	}
+
+	const modules = await Module.find({
+		_id: { $in: favoriteIds },
+		status: 'published'
+	});
+
+	const byId = new Map(modules.map((module) => [String(module._id), module]));
+	const ordered = favoriteIds
+		.map((id) => byId.get(id))
+		.filter((module): module is ModuleDocument => Boolean(module))
+		.reverse();
+
+	const authorIds = [...new Set(ordered.map((module) => String(module.authorId)))];
+	const authors = await User.find({ _id: { $in: authorIds } }).select('username').lean();
+	const usernameById = new Map(authors.map((author) => [String(author._id), author.username ?? '']));
+
+	return ordered.map((module) => ({
+		module,
+		authorUsername: usernameById.get(String(module.authorId)) ?? ''
+	}));
+}
+
+export async function addFavorite(
+	userId: string,
+	moduleId: string
+): Promise<FavoriteToggleResult | null> {
+	const module = await Module.findOne({ _id: moduleId, status: 'published' });
+	if (!module) {
+		return null;
+	}
+
+	const moduleObjectId = new mongoose.Types.ObjectId(moduleId);
+	const updatedUser = await User.findOneAndUpdate(
+		{ _id: userId, favoriteModules: { $ne: moduleObjectId } },
+		{ $addToSet: { favoriteModules: moduleObjectId } },
+		{ new: true }
+	);
+
+	if (updatedUser) {
+		module.favorites = Math.max(0, (module.favorites ?? 0) + 1);
+		await module.save();
+		syncModuleIndexBackground(moduleId);
+	}
+
+	const fresh = await Module.findById(moduleId).select('favorites').lean();
+	return {
+		favorited: true,
+		favorites: fresh?.favorites ?? module.favorites ?? 0
+	};
+}
+
+export async function removeFavorite(
+	userId: string,
+	moduleId: string
+): Promise<FavoriteToggleResult | null> {
+	const module = await Module.findOne({ _id: moduleId, status: 'published' });
+	if (!module) {
+		return null;
+	}
+
+	const moduleObjectId = new mongoose.Types.ObjectId(moduleId);
+	const updatedUser = await User.findOneAndUpdate(
+		{ _id: userId, favoriteModules: moduleObjectId },
+		{ $pull: { favoriteModules: moduleObjectId } },
+		{ new: true }
+	);
+
+	if (updatedUser) {
+		module.favorites = Math.max(0, (module.favorites ?? 0) - 1);
+		await module.save();
+		syncModuleIndexBackground(moduleId);
+	}
+
+	const user = await User.findById(userId).select('favoriteModules').lean();
+	const stillFavorited = (user?.favoriteModules ?? []).some((id) => String(id) === moduleId);
+	const fresh = await Module.findById(moduleId).select('favorites').lean();
+
+	return {
+		favorited: stillFavorited,
+		favorites: fresh?.favorites ?? module.favorites ?? 0
+	};
+}

@@ -1,4 +1,5 @@
 ﻿import type { ModuleSearchHit } from '../../api/search';
+import { formatModuleCardAttributes } from '../../utils/formatModuleCardAttributes';
 import ModuleCard from './ModuleCard';
 
 type SearchResultsProps = {
@@ -6,20 +7,20 @@ type SearchResultsProps = {
 	loading: boolean;
 	error: string | null;
 	emptyMessage: string;
+	favoriteIds?: Set<string>;
 	onSelectResult?: (moduleId: string) => void;
+	onFavoriteToggle?: (moduleId: string) => void;
 };
 
-function formatAttributes(hit: ModuleSearchHit): string {
-	const parts = [
-		`Levels ${hit.startingLevel}–${hit.endingLevel}`,
-		hit.playstyle,
-		hit.biomes.slice(0, 2).join(', '),
-		hit.authorUsername ? `by ${hit.authorUsername}` : ''
-	].filter(Boolean);
-	return parts.join(' · ');
-}
-
-function SearchResults({ hits, loading, error, emptyMessage, onSelectResult }: SearchResultsProps) {
+function SearchResults({
+	hits,
+	loading,
+	error,
+	emptyMessage,
+	favoriteIds,
+	onSelectResult,
+	onFavoriteToggle
+}: SearchResultsProps) {
 	return (
 		<section className="search-panel" aria-labelledby="search-results-heading">
 			<h2 id="search-results-heading">Search Results</h2>
@@ -31,8 +32,10 @@ function SearchResults({ hits, loading, error, emptyMessage, onSelectResult }: S
 					<ModuleCard
 						key={hit.id}
 						contentName={hit.title}
-						attributes={formatAttributes(hit)}
+						attributes={formatModuleCardAttributes(hit)}
 						flavorText={hit.flavorText}
+						isFavorited={favoriteIds?.has(hit.id) ?? false}
+						{...(onFavoriteToggle ? { onFavoriteToggle: () => onFavoriteToggle(hit.id) } : {})}
 						{...(onSelectResult ? { onSelect: () => onSelectResult(hit.id) } : {})}
 					/>
 				))}
