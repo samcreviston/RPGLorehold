@@ -60,6 +60,25 @@
 	color: var(--base-slate-black);
 }
 
+.content-window-tool--generated {
+	animation: content-window-generated-flash 1.2s ease-out;
+}
+
+@keyframes content-window-generated-flash {
+	0% {
+		border-color: rgba(218, 165, 32, 0.25);
+		box-shadow: 0 0 0 0 rgba(218, 165, 32, 0);
+	}
+	30% {
+		border-color: #d4a52b;
+		box-shadow: 0 0 0 4px rgba(218, 165, 32, 0.6);
+	}
+	100% {
+		border-color: rgba(192, 161, 119, 0.3);
+		box-shadow: 0 0 0 0 rgba(218, 165, 32, 0);
+	}
+}
+
 .content-window-body {
 	min-height: 0;
 	flex: 1 1 auto;

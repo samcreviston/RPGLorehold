@@ -11,6 +11,8 @@ type ContentWindowToolProps = {
 	error: string;
 	creature: MappedCreatureStatblock | null;
 	detail: Open5eDetailViewModel | null;
+	isGeneratedContent?: boolean;
+	onGeneratedContentViewed?: () => void;
 };
 
 function ContentWindowTool({
@@ -19,12 +21,15 @@ function ContentWindowTool({
 	status,
 	error,
 	creature,
-	detail
+	detail,
+	isGeneratedContent = false,
+	onGeneratedContentViewed
 }: ContentWindowToolProps) {
 	return (
 		<section
-			className={`sidebar-tool-card content-window-tool${isOpen ? '' : ' sidebar-tool-card--collapsed'}`}
+			className={`sidebar-tool-card content-window-tool${isOpen ? '' : ' sidebar-tool-card--collapsed'}${isGeneratedContent ? ' content-window-tool--generated' : ''}`}
 			aria-label="Content Window"
+			onAnimationEnd={isGeneratedContent ? onGeneratedContentViewed : undefined}
 		>
 			<div className="section-card-heading">
 				<h4>Content Window</h4>

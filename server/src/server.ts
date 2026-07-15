@@ -7,6 +7,7 @@ import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
 import { ensureModulesIndex } from './config/meilisearch.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import aiRoutes from './routes/aiRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
 import moduleRoutes from './routes/moduleRoutes.js';
@@ -36,6 +37,7 @@ async function startServer(): Promise<void> {
 	});
 
 	app.use('/api/auth', authRoutes);
+	app.use('/api/ai', aiRoutes);
 	app.use('/api/campaigns', campaignRoutes);
 	app.use('/api/modules', moduleRoutes);
 	app.use('/api/search', searchRoutes);

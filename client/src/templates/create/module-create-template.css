@@ -283,9 +283,13 @@
 
 .lair-chat-message {
 	padding: var(--space-2);
-	border-radius: var(--radius-sm);
-	border: 1px solid rgba(192, 161, 119, 0.2);
+	border-radius: var(--radius-md);
+	border-left: 1px solid rgba(192, 161, 119, 0.2);
+	border-right: 1px solid rgba(192, 161, 119, 0.2);
+	border-top: 4px solid rgba(192, 161, 119, 0.55);
+	border-bottom: 4px solid rgba(192, 161, 119, 0.55);
 	max-width: 92%;
+	box-sizing: border-box;
 }
 
 .lair-chat-message p {
@@ -296,20 +300,26 @@
 
 .lair-chat-message--user {
 	justify-self: end;
-	background: rgba(101, 76, 163, 0.16);
+	border-top-color: rgba(101, 76, 163, 0.9);
+	border-bottom-color: rgba(101, 76, 163, 0.9);
+	color: var(--accent2-white);
 }
 
 .lair-chat-message--assistant {
 	justify-self: start;
-	background: rgba(255, 255, 255, 0.04);
+	background: rgba(192, 161, 119, 0.1);
+	border-top-color: rgba(192, 161, 119, 0.95);
+	border-bottom-color: rgba(192, 161, 119, 0.95);
+	color: var(--base-slate-black);
 }
 
 .lair-chat-input-wrap {
 	margin: 0;
-	position: relative;
 	min-width: 0;
 	width: 100%;
 	max-width: 100%;
+	display: grid;
+	gap: var(--space-2);
 }
 
 .lair-chat-input-wrap textarea {
@@ -317,15 +327,30 @@
 	width: 100%;
 	max-width: 100%;
 	box-sizing: border-box;
-	padding-right: 5.5rem;
 	min-height: 92px;
 	resize: vertical;
 }
 
+.lair-chat-mode-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.lair-chat-template-label {
+	display: grid;
+	gap: var(--space-1);
+	font-size: var(--text-sm);
+	color: var(--base-slate-black);
+}
+
+.lair-chat-template-label select {
+	width: 100%;
+	min-width: 0;
+}
+
 .lair-chat-send-button {
-	position: absolute;
-	top: var(--space-1);
-	right: var(--space-1);
+	justify-self: end;
 	padding: 0.35rem 0.75rem;
 	background: var(--primary-purple);
 	border-color: var(--primary-purple);

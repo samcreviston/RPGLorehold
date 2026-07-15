@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
 import { useAuth } from '../../auth/AuthContext';
 import ContentWindowTool from '../../components/content/ContentWindowTool';
+import LairChatTool from '../../components/lair/LairChatTool';
 import CreatureStatBlock from '../../components/content/CreatureStatBlock';
 import Open5eDetailCard from '../../components/content/Open5eDetailCard';
 import ModulePreviewView from '../../components/module/ModulePreviewView';
@@ -223,12 +224,6 @@ function kindHintForResult(filter: ContentTypeFilter, result: ContentManagerResu
 	return result.objectModel ?? result.detailPath ?? '';
 }
 
-type ChatMessage = {
-	id: string;
-	role: 'assistant' | 'user';
-	content: string;
-};
-
 function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps) {
 	const { user } = useAuth();
 	const idCounterRef = useRef(0);
@@ -267,18 +262,9 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 	const [nonCreatureDetail, setNonCreatureDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [nonCreatureDetailStatus, setNonCreatureDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 	const [nonCreatureDetailError, setNonCreatureDetailError] = useState('');
-	const [chatDraft, setChatDraft] = useState('');
-	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-		{
-			id: 'assistant-intro',
-			role: 'assistant',
-			content: 'Greetings, creator. I am your Lair Co-Dragon. Ask for story hooks, pacing help, or encounter ideas.'
-		}
-	]);
 	const [isSidebarToolsOpen, setIsSidebarToolsOpen] = useState(false);
 	const [isStoryContentInfoOpen, setIsStoryContentInfoOpen] = useState(true);
 	const [isContentManagerOpen, setIsContentManagerOpen] = useState(true);
-	const [isLairChatOpen, setIsLairChatOpen] = useState(true);
 	const [inlineAddSectionMenu, setInlineAddSectionMenu] = useState<{
 		adventureId: string;
 		afterBlockId: string;
@@ -917,30 +903,6 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 		contentWindow.openContentLinkInWindow(href, contentKey);
 	});
 
-	const sendChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-
-		const trimmedMessage = chatDraft.trim();
-		if (!trimmedMessage) {
-			return;
-		}
-
-		const userMessage: ChatMessage = {
-			id: `user-${Date.now()}`,
-			role: 'user',
-			content: trimmedMessage
-		};
-
-		const assistantReply: ChatMessage = {
-			id: `assistant-${Date.now()}`,
-			role: 'assistant',
-			content: 'I can help shape that scene. API and backend chat hookup comes next in the workflow.'
-		};
-
-		setChatMessages((previousMessages) => [...previousMessages, userMessage, assistantReply]);
-		setChatDraft('');
-	};
-
 	const contentWindowPanel = (
 		<ContentWindowTool
 			isOpen={contentWindow.isContentWindowOpen}
@@ -949,6 +911,8 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 			error={contentWindow.contentWindowError}
 			creature={contentWindow.contentWindowCreature}
 			detail={contentWindow.contentWindowDetail}
+			isGeneratedContent={contentWindow.isGeneratedContent}
+			onGeneratedContentViewed={contentWindow.clearGeneratedContentHighlight}
 		/>
 	);
 
@@ -1142,49 +1106,12 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 
 							{contentWindowPanel}
 
-							<section
-								className={`sidebar-tool-card lair-chat-tool${isLairChatOpen ? '' : ' sidebar-tool-card--collapsed'}`}
-								aria-label="Lair Co-Dragon Chat"
-							>
-								<div className="section-card-heading">
-									<h4>Lair Co-Dragon Chat</h4>
-									<button
-										type="button"
-										className="section-collapse-button"
-										aria-expanded={isLairChatOpen}
-										aria-label={isLairChatOpen ? 'Collapse Lair Co-Dragon Chat' : 'Expand Lair Co-Dragon Chat'}
-										onClick={() => setIsLairChatOpen((previous) => !previous)}
-									>
-										{isLairChatOpen ? '▾' : '▸'}
-									</button>
-								</div>
-								{isLairChatOpen ? (
-									<>
-								<div className="lair-chat-log" aria-live="polite">
-									{chatMessages.map((message) => (
-										<article
-											key={message.id}
-											className={`lair-chat-message lair-chat-message--${message.role}`}
-										>
-											<p>{message.content}</p>
-										</article>
-									))}
-								</div>
-								<form className="lair-chat-input-wrap" onSubmit={sendChatMessage}>
-									<textarea
-										value={chatDraft}
-										onChange={(event) => setChatDraft(event.target.value)}
-										placeholder="Discuss your story ideas with the Lair Co-Dragon..."
-										rows={4}
-										aria-label="Chat reply"
-									/>
-									<button type="submit" className="lair-chat-send-button">
-										Send
-									</button>
-								</form>
-									</>
-								) : null}
-							</section>
+							<LairChatTool
+								onGeneratedContent={(content) => {
+									setIsSidebarToolsOpen(true);
+									contentWindow.openGeneratedContentInWindow(content);
+								}}
+							/>
 						</div>
 				</aside>
 

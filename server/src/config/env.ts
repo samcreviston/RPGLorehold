@@ -22,6 +22,9 @@ const envSchema = z.object({
 	OPENAI_MODEL: z.string().default('gpt-4.1-mini'),
 	OPENAI_MAX_TOKENS: z.coerce.number().int().positive().default(2000),
 	OPENAI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(45000),
+	AI_MAX_PROMPT_CHARS: z.coerce.number().int().positive().max(20000).default(6000),
+	AI_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+	AI_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().max(100).default(10),
 	MEILISEARCH_HOST: z.string().default('http://localhost:7700'),
 	MEILISEARCH_API_KEY: z.string().optional().default(''),
 	OPEN5E_BASE_URL: z.string().default('https://api.open5e.com')

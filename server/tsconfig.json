@@ -6,7 +6,8 @@
     "module": "NodeNext",
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "isolatedModules": true
   },
   "ts-node": {
     "esm": true,

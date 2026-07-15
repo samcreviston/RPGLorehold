@@ -1,6 +1,12 @@
-﻿/*
-Planning note:
-- Responsibility: aiRoutes module scaffold for the RPG module platform architecture.
-- Required future exports: typed interfaces, public API surface, and integration points for its layer.
-- Future logic focus: auth boundaries, campaign/module workflows, OpenAI structured outputs, and Meilisearch sync readiness.
-*/
+﻿import { Router } from 'express';
+import * as aiController from '../controllers/aiController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
+
+const aiRoutes = Router();
+
+aiRoutes.use(requireAuth);
+aiRoutes.use(aiRateLimiter);
+aiRoutes.post('/generate', aiController.generate);
+
+export default aiRoutes;

@@ -5,6 +5,10 @@ import { mapOpen5eCreatureToStatblock } from '../lib/open5e/mapOpen5eCreatureToS
 import { mapOpen5eItemToDetailView } from '../lib/open5e/mapOpen5eItemToDetailView';
 import type { Open5eDetailViewModel } from '../lib/open5e/open5eDetailTypes';
 import { isCreatureDeepLink, toOpen5eProxyPath } from '../lib/open5e/toOpen5eProxyPath';
+import {
+	toGeneratedContentPreview,
+	type GeneratedContent
+} from '../lib/generatedContent/generatedContent';
 
 export function useContentWindow() {
 	const contentWindowFetchRef = useRef<AbortController | null>(null);
@@ -15,6 +19,7 @@ export function useContentWindow() {
 	);
 	const [contentWindowDetail, setContentWindowDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [contentWindowError, setContentWindowError] = useState('');
+	const [isGeneratedContent, setIsGeneratedContent] = useState(false);
 
 	const openContentLinkInWindow = useEffectEvent((href: string, contentKey?: string) => {
 		setIsContentWindowOpen(true);
@@ -36,6 +41,7 @@ export function useContentWindow() {
 		setContentWindowError('');
 		setContentWindowCreature(null);
 		setContentWindowDetail(null);
+		setIsGeneratedContent(false);
 
 		void (async () => {
 			try {
@@ -109,6 +115,17 @@ export function useContentWindow() {
 		})();
 	});
 
+	const openGeneratedContentInWindow = useEffectEvent((content: GeneratedContent) => {
+		contentWindowFetchRef.current?.abort();
+		const preview = toGeneratedContentPreview(content);
+		setIsContentWindowOpen(true);
+		setContentWindowStatus('idle');
+		setContentWindowError('');
+		setContentWindowCreature(preview.kind === 'creature' ? preview.creature : null);
+		setContentWindowDetail(preview.kind === 'detail' ? preview.detail : null);
+		setIsGeneratedContent(true);
+	});
+
 	return {
 		isContentWindowOpen,
 		setIsContentWindowOpen,
@@ -116,6 +133,9 @@ export function useContentWindow() {
 		contentWindowCreature,
 		contentWindowDetail,
 		contentWindowError,
-		openContentLinkInWindow
+		isGeneratedContent,
+		openContentLinkInWindow,
+		openGeneratedContentInWindow,
+		clearGeneratedContentHighlight: () => setIsGeneratedContent(false)
 	};
 }
