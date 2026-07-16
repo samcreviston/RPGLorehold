@@ -1,6 +1,7 @@
 ﻿import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import * as searchService from '../services/searchService.js';
+import { CONTENT_SEARCH_CATEGORIES } from '../types/searchTypes.js';
 
 function parseListParam(value: unknown): string[] | undefined {
 	if (typeof value === 'string' && value.trim()) {
@@ -94,6 +95,51 @@ export async function search(req: Request, res: Response, next: NextFunction): P
 			...(parsed.levelMax !== undefined ? { levelMax: parsed.levelMax } : {})
 		});
 		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
+const contentSearchQuerySchema = z.object({
+	q: z.string().optional().default(''),
+	category: z.enum(CONTENT_SEARCH_CATEGORIES),
+	contentTypes: z.array(z.string()).min(1),
+	authorUsername: z.string().trim().optional(),
+	size: z.string().trim().optional(),
+	creatureType: z.string().trim().optional(),
+	alignment: z.string().trim().optional(),
+	className: z.string().trim().optional(),
+	ancestry: z.string().trim().optional(),
+	rarity: z.string().trim().optional(),
+	itemCategory: z.string().trim().optional(),
+	damageType: z.string().trim().optional(),
+	range: z.string().trim().optional(),
+	armorClass: z.string().trim().optional(),
+	strengthRequired: z.preprocess(
+		(value) => (value === undefined || value === '' ? undefined : value),
+		z.coerce.number().int().min(1).optional()
+	),
+	spellSchool: z.string().trim().optional(),
+	casterType: z.string().trim().optional(),
+	subclassOf: z.string().trim().optional(),
+	ritual: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+	concentration: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+	sort: z.string().optional().default('relevance'),
+	page: z.preprocess((value) => (value === undefined || value === '' ? 1 : value), z.coerce.number().int().min(1)),
+	limit: z.preprocess(
+		(value) => (value === undefined || value === '' ? 20 : value),
+		z.coerce.number().int().min(1).max(50)
+	)
+});
+
+export async function searchContents(req: Request, res: Response, next: NextFunction): Promise<void> {
+	try {
+		const parsed = contentSearchQuerySchema.parse({
+			...req.query,
+			q: typeof req.query.q === 'string' ? req.query.q : '',
+			contentTypes: parseListParam(req.query.contentTypes)
+		});
+		res.json(await searchService.searchContents(parsed));
 	} catch (error) {
 		next(error);
 	}

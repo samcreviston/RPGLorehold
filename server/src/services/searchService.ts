@@ -1,5 +1,13 @@
-﻿import { ensureModulesIndex, modulesIndex } from '../config/meilisearch.js';
+﻿import {
+	contentsIndex,
+	ensureContentsIndex,
+	ensureModulesIndex,
+	modulesIndex
+} from '../config/meilisearch.js';
 import type {
+	ContentSearchDocument,
+	SearchContentsQuery,
+	SearchContentsResult,
 	ModuleSearchDocument,
 	SearchModulesQuery,
 	SearchModulesResult
@@ -129,5 +137,66 @@ export async function searchModules(query: SearchModulesQuery): Promise<SearchMo
 		limit: query.limit,
 		offset,
 		estimatedTotalHits
+	};
+}
+
+const CONTENT_ALLOWED_SORTS = new Set([
+	'publishedAt:asc',
+	'publishedAt:desc',
+	'title:asc',
+	'title:desc',
+	'level:asc',
+	'level:desc',
+	'challengeRating:asc',
+	'challengeRating:desc'
+]);
+
+function contentFilter(query: SearchContentsQuery): string {
+	const types = query.contentTypes.map((type) => `contentType = ${quoteFilterValue(type)}`);
+	const parts = [`searchCategory = ${quoteFilterValue(query.category)}`, `(${types.join(' OR ')})`];
+	const values: Array<[string, string | undefined]> = [
+		['authorUsername', query.authorUsername],
+		['size', query.size],
+		['creatureType', query.creatureType],
+		['alignment', query.alignment],
+		['className', query.className],
+		['ancestry', query.ancestry],
+		['rarity', query.rarity],
+		['category', query.itemCategory],
+		['damageType', query.damageType],
+		['range', query.range],
+		['armorClass', query.armorClass],
+		['spellSchool', query.spellSchool],
+		['casterType', query.casterType],
+		['subclassOf', query.subclassOf]
+	];
+	for (const [field, value] of values) {
+		if (value) parts.push(`${field} = ${quoteFilterValue(value)}`);
+	}
+	if (query.ritual !== undefined) parts.push(`ritual = ${query.ritual}`);
+	if (query.concentration !== undefined) parts.push(`concentration = ${query.concentration}`);
+	if (query.strengthRequired !== undefined) parts.push(`strengthRequired = ${query.strengthRequired}`);
+	return parts.join(' AND ');
+}
+
+export async function searchContents(query: SearchContentsQuery): Promise<SearchContentsResult> {
+	await ensureContentsIndex();
+	const offset = Math.max(0, (query.page - 1) * query.limit);
+	const sort =
+		query.sort && query.sort !== 'relevance' && CONTENT_ALLOWED_SORTS.has(query.sort)
+			? [query.sort]
+			: undefined;
+	const result = await contentsIndex().search<ContentSearchDocument>(query.q, {
+		offset,
+		limit: query.limit,
+		filter: contentFilter(query),
+		...(sort ? { sort } : {})
+	});
+	return {
+		hits: result.hits,
+		query: query.q,
+		limit: query.limit,
+		offset,
+		estimatedTotalHits: result.estimatedTotalHits ?? result.hits.length
 	};
 }

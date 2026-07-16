@@ -1,5 +1,6 @@
-﻿import type { ModuleSearchHit } from '../../api/search';
+﻿import type { ContentSearchCategory, ContentSearchHit, ModuleSearchHit } from '../../api/search';
 import { formatModuleCardAttributes } from '../../utils/formatModuleCardAttributes';
+import ContentCard from './ContentCard';
 import ModuleCard from './ModuleCard';
 
 type SearchResultsProps = {
@@ -11,6 +12,9 @@ type SearchResultsProps = {
 	onSelectResult?: (moduleId: string) => void;
 	onFavoriteToggle?: (moduleId: string) => void;
 	onAddToCampaign?: (hit: ModuleSearchHit) => void;
+	contentHits?: ContentSearchHit[];
+	contentCategory: ContentSearchCategory | undefined;
+	onSelectContent?: (hit: ContentSearchHit) => void;
 };
 
 function SearchResults({
@@ -21,15 +25,21 @@ function SearchResults({
 	favoriteIds,
 	onSelectResult,
 	onFavoriteToggle,
-	onAddToCampaign
+	onAddToCampaign,
+	contentHits = [],
+	contentCategory,
+	onSelectContent
 }: SearchResultsProps) {
 	return (
 		<section className="search-panel" aria-labelledby="search-results-heading">
 			<h2 id="search-results-heading">Search Results</h2>
 			{loading ? <p>Searching…</p> : null}
 			{error ? <p role="alert">{error}</p> : null}
-			{!loading && !error && hits.length === 0 ? <p>{emptyMessage}</p> : null}
-			<div className="search-results-grid">
+			{!loading && !error && hits.length === 0 && contentHits.length === 0 ? <p>{emptyMessage}</p> : null}
+			<div className={`search-results-grid${contentCategory ? ` search-results-grid--${contentCategory}` : ''}`}>
+				{contentHits.map((hit) => (
+					<ContentCard key={hit.id} hit={hit} onSelect={() => onSelectContent?.(hit)} />
+				))}
 				{hits.map((hit) => (
 					<ModuleCard
 						key={hit.id}

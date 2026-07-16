@@ -20,6 +20,7 @@ export function useContentWindow() {
 	const [contentWindowDetail, setContentWindowDetail] = useState<Open5eDetailViewModel | null>(null);
 	const [contentWindowError, setContentWindowError] = useState('');
 	const [isGeneratedContent, setIsGeneratedContent] = useState(false);
+	const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
 
 	const openContentLinkInWindow = useEffectEvent((href: string, contentKey?: string) => {
 		setIsContentWindowOpen(true);
@@ -42,6 +43,7 @@ export function useContentWindow() {
 		setContentWindowCreature(null);
 		setContentWindowDetail(null);
 		setIsGeneratedContent(false);
+		setGeneratedContent(null);
 
 		void (async () => {
 			try {
@@ -124,6 +126,7 @@ export function useContentWindow() {
 		setContentWindowCreature(preview.kind === 'creature' ? preview.creature : null);
 		setContentWindowDetail(preview.kind === 'detail' ? preview.detail : null);
 		setIsGeneratedContent(true);
+		setGeneratedContent(content);
 	});
 
 	return {
@@ -134,6 +137,7 @@ export function useContentWindow() {
 		contentWindowDetail,
 		contentWindowError,
 		isGeneratedContent,
+		generatedContent,
 		openContentLinkInWindow,
 		openGeneratedContentInWindow,
 		clearGeneratedContentHighlight: () => setIsGeneratedContent(false)

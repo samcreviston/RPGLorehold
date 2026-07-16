@@ -2,6 +2,7 @@ import CreatureStatBlock from './CreatureStatBlock';
 import Open5eDetailCard from './Open5eDetailCard';
 import type { MappedCreatureStatblock } from '../../lib/open5e/creatureTypes';
 import type { Open5eDetailViewModel } from '../../lib/open5e/open5eDetailTypes';
+import type { GeneratedContent } from '../../lib/generatedContent/generatedContent';
 import './content-window-tool.css';
 
 type ContentWindowToolProps = {
@@ -13,6 +14,8 @@ type ContentWindowToolProps = {
 	detail: Open5eDetailViewModel | null;
 	isGeneratedContent?: boolean;
 	onGeneratedContentViewed?: () => void;
+	generatedContent?: GeneratedContent | null;
+	onSaveGeneratedContent?: (content: GeneratedContent) => void;
 };
 
 function ContentWindowTool({
@@ -23,7 +26,9 @@ function ContentWindowTool({
 	creature,
 	detail,
 	isGeneratedContent = false,
-	onGeneratedContentViewed
+	onGeneratedContentViewed,
+	generatedContent = null,
+	onSaveGeneratedContent
 }: ContentWindowToolProps) {
 	return (
 		<section
@@ -56,6 +61,15 @@ function ContentWindowTool({
 					) : (
 						<p className="content-results-empty">Click a linked content tag to view it here.</p>
 					)}
+					{generatedContent && onSaveGeneratedContent ? (
+						<button
+							type="button"
+							className="content-window-save-button"
+							onClick={() => onSaveGeneratedContent(generatedContent)}
+						>
+							Save to Creator
+						</button>
+					) : null}
 				</div>
 			) : null}
 		</section>

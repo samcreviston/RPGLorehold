@@ -1,0 +1,115 @@
+.content-create-template {
+	display: grid;
+	gap: var(--space-4);
+	max-width: 920px;
+	padding: var(--space-5);
+	border: 1px solid rgba(192, 161, 119, 0.45);
+	border-radius: var(--radius-md);
+}
+
+.content-create-template header,
+.content-create-template label,
+.content-create-actions {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.content-create-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--space-4);
+}
+
+.content-create-template--monster {
+	max-width: 1120px;
+}
+
+.monster-core-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: var(--space-4);
+}
+
+.monster-ability-section,
+.monster-actions-section {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.monster-ability-grid {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: var(--space-2);
+}
+
+.monster-ability-grid--modifiers {
+	grid-auto-rows: 2.75rem;
+}
+
+.monster-ability-cell {
+	display: grid;
+	gap: var(--space-2);
+	align-items: center;
+	text-align: center;
+}
+
+.monster-ability-cell--label,
+.monster-ability-cell--modifier {
+	padding: var(--space-2);
+	border: 1px solid rgba(192, 161, 119, 0.35);
+	border-radius: var(--radius-sm);
+	background: rgba(255, 255, 255, 0.03);
+	font-weight: 600;
+}
+
+.monster-actions-list {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.monster-action-card {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	border: 1px solid rgba(192, 161, 119, 0.35);
+	border-radius: var(--radius-md);
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.monster-action-description {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.monster-actions-empty {
+	margin: 0;
+	color: var(--text-secondary);
+}
+
+.monster-add-action-button {
+	justify-self: start;
+}
+
+.content-create-field--wide {
+	grid-column: 1 / -1;
+}
+
+.content-create-template textarea {
+	resize: vertical;
+}
+
+.content-create-template input[type='checkbox'] {
+	width: 1.1rem;
+	height: 1.1rem;
+}
+
+.content-create-actions {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.content-create-actions button:last-child {
+	background: var(--primary-purple);
+	border-color: var(--primary-purple);
+	color: var(--accent2-white);
+}

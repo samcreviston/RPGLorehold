@@ -3,17 +3,22 @@ export const templateTypeOptions = [
 	{ key: 'campaign', label: 'Campaign' },
 	{ key: 'oneshot', label: 'One-shot' },
 	{ key: 'adventure', label: 'Adventure' },
-	{ key: 'world', label: 'World' },
 	{ key: 'monster', label: 'Monster' },
-	{ key: 'npc', label: 'NPC' },
+	{ key: 'npc', label: 'NPC (Story Only)' },
+	{ key: 'npcStats', label: 'NPC (Story & Stats)' },
 	{ key: 'premadeCharacter', label: 'Pre-made Character' },
 	{ key: 'weapon', label: 'Weapon' },
 	{ key: 'armor', label: 'Armor' },
-	{ key: 'gear', label: 'Gear' },
-	{ key: 'potion', label: 'Potion' },
 	{ key: 'magicItem', label: 'Magic Item' },
 	{ key: 'beverageFood', label: 'Beverage/Food' },
-	{ key: 'dungeonEnvironmentItem', label: 'Dungeon/Environment Item' }
+	{ key: 'dungeonEnvironmentItem', label: 'Dungeon/Environment Item' },
+	{ key: 'item', label: 'Item' },
+	{ key: 'spell', label: 'Spell' },
+	{ key: 'condition', label: 'Condition' },
+	{ key: 'spellSchool', label: 'Spell School' },
+	{ key: 'class', label: 'Class' },
+	{ key: 'environment', label: 'Environment' },
+	{ key: 'service', label: 'Service' }
 ] as const;
 
 export type TemplateTypeKey = (typeof templateTypeOptions)[number]['key'];

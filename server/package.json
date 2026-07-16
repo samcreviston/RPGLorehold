@@ -17,6 +17,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "reindex": "node --import tsx src/scripts/reindexModules.ts",
+    "reindex:contents": "node --import tsx src/scripts/reindexContents.ts",
     "lint": "echo \"Planning phase: lint rules pending\"",
     "test": "jest"
   },

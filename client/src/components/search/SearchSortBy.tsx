@@ -1,7 +1,10 @@
+import type { ContentSearchCategory } from '../../api/search';
+
 type SearchSortByProps = {
 	value: string;
 	onChange: (value: string) => void;
 	disabled?: boolean;
+	category?: 'content' | ContentSearchCategory;
 };
 
 const sortOptions: ReadonlyArray<{ value: string; label: string }> = [
@@ -24,7 +27,20 @@ const sortOptions: ReadonlyArray<{ value: string; label: string }> = [
 	{ value: 'numberOfAdventures:desc', label: 'Most adventures' }
 ];
 
-function SearchSortBy({ value, onChange, disabled = false }: SearchSortByProps) {
+const contentSortOptions = [
+	{ value: 'relevance', label: 'Relevance' },
+	{ value: 'publishedAt:desc', label: 'Newest published' },
+	{ value: 'publishedAt:asc', label: 'Oldest published' },
+	{ value: 'title:asc', label: 'Title A–Z' },
+	{ value: 'title:desc', label: 'Title Z–A' },
+	{ value: 'level:asc', label: 'Level ↑' },
+	{ value: 'level:desc', label: 'Level ↓' },
+	{ value: 'challengeRating:asc', label: 'CR ↑' },
+	{ value: 'challengeRating:desc', label: 'CR ↓' }
+];
+
+function SearchSortBy({ value, onChange, disabled = false, category = 'content' }: SearchSortByProps) {
+	const options = category === 'content' ? sortOptions : contentSortOptions;
 	return (
 		<section className="search-labeled-row" aria-label="Sort by">
 			<p className="search-labeled-row__label">Sort by</p>
@@ -36,7 +52,7 @@ function SearchSortBy({ value, onChange, disabled = false }: SearchSortByProps) 
 						disabled={disabled}
 						onChange={(event) => onChange(event.target.value)}
 					>
-						{sortOptions.map((option) => (
+						{options.map((option) => (
 							<option key={option.value} value={option.value}>
 								{option.label}
 							</option>

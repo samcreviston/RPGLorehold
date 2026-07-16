@@ -90,3 +90,10 @@
 	color: rgba(20, 20, 20, 0.7);
 	font-size: var(--text-sm);
 }
+
+.content-window-save-button {
+	margin-top: var(--space-3);
+	background: var(--primary-purple);
+	border-color: var(--primary-purple);
+	color: var(--accent2-white);
+}

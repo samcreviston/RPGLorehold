@@ -1,17 +1,35 @@
-﻿import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+﻿import { useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import usePageMeta from '../hooks/usePageMeta';
-import { createTemplateMap } from '../templates/create';
+import ContentCreateTemplate from '../templates/create/ContentCreateTemplate';
 import ModuleCreateTemplate from '../templates/create/ModuleCreateTemplate';
 import { templateTypeOptions, type TemplateTypeKey } from '../templates/templateTypes';
+import type { ContentSource } from '../types/content';
 import './creator-page.css';
 
 type CreatorViewMode = 'editor' | 'preview';
 
+type CreatorLocationState = {
+	initialContent?: {
+		contentType: TemplateTypeKey;
+		title: string;
+		data: Record<string, unknown>;
+		source: ContentSource;
+	};
+};
+
 function CreatorPage() {
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const location = useLocation();
 	const moduleIdFromQuery = searchParams.get('moduleId')?.trim() ?? '';
-	const [selectedTemplateType, setSelectedTemplateType] = useState<TemplateTypeKey>('module');
+	const contentIdFromQuery = searchParams.get('contentId')?.trim() ?? '';
+	const contentTypeFromQuery = searchParams.get('contentType')?.trim() ?? '';
+	const initialContent = (location.state as CreatorLocationState | null)?.initialContent ?? null;
+	const [selectedTemplateType, setSelectedTemplateType] = useState<TemplateTypeKey>(
+		templateTypeOptions.some((option) => option.key === contentTypeFromQuery)
+			? (contentTypeFromQuery as TemplateTypeKey)
+			: initialContent?.contentType ?? 'module'
+	);
 	const [viewMode, setViewMode] = useState<CreatorViewMode>('editor');
 
 	usePageMeta({
@@ -19,11 +37,6 @@ function CreatorPage() {
 		description: 'Build RPG content using dedicated templates for modules, campaigns, creatures, and items.',
 		path: '/creator'
 	});
-
-	const SelectedTemplate = useMemo(
-		() => createTemplateMap[selectedTemplateType],
-		[selectedTemplateType]
-	);
 
 	const moduleTemplateKey = moduleIdFromQuery || 'new-module';
 
@@ -66,7 +79,10 @@ function CreatorPage() {
 						<select
 							id="creator-template-select"
 							value={selectedTemplateType}
-							onChange={(event) => setSelectedTemplateType(event.target.value as TemplateTypeKey)}
+							onChange={(event) => {
+								setSelectedTemplateType(event.target.value as TemplateTypeKey);
+								setSearchParams({});
+							}}
 						>
 							{templateTypeOptions.map((templateTypeOption) => (
 								<option key={templateTypeOption.key} value={templateTypeOption.key}>
@@ -79,12 +95,16 @@ function CreatorPage() {
 
 				{selectedTemplateType === 'module' ? (
 					<ModuleCreateTemplate key={moduleTemplateKey} viewMode={viewMode} />
-				) : viewMode === 'editor' ? (
-					<SelectedTemplate key={moduleTemplateKey} />
 				) : (
-					<p className="creator-preview-empty">
-						begin writing your content in the editor tab and then preview it here
-					</p>
+					<ContentCreateTemplate
+						key={contentIdFromQuery || `${selectedTemplateType}-${initialContent?.title ?? 'new'}`}
+						contentType={selectedTemplateType}
+						contentId={contentIdFromQuery || undefined}
+						initialContent={
+							initialContent?.contentType === selectedTemplateType ? initialContent : null
+						}
+						viewMode={viewMode}
+					/>
 				)}
 			</div>
 		</main>

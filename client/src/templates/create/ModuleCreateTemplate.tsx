@@ -2,10 +2,9 @@ import {
 	useEffect,
 	useEffectEvent,
 	useRef,
-	useState,
-	type MutableRefObject
+	useState
 } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createModule, getModule, publishModule, updateModule } from '../../api/modules';
 import { useAuth } from '../../auth/AuthContext';
 import ContentWindowTool from '../../components/content/ContentWindowTool';
@@ -26,7 +25,9 @@ import {
 import { mapOpen5eCreatureToStatblock } from '../../lib/open5e/mapOpen5eCreatureToStatblock';
 import { mapOpen5eItemToDetailView } from '../../lib/open5e/mapOpen5eItemToDetailView';
 import type { Open5eDetailViewModel } from '../../lib/open5e/open5eDetailTypes';
+import type { GeneratedContent } from '../../lib/generatedContent/generatedContent';
 import type { ModuleDocument, ModuleUpsertPayload, Playstyle } from '../../types/module';
+import type { TemplateTypeKey } from '../templateTypes';
 import { setLastCreatorModuleId } from '../../utils/lastCreatorModule';
 import './module-create-template.css';
 
@@ -224,9 +225,19 @@ function kindHintForResult(filter: ContentTypeFilter, result: ContentManagerResu
 	return result.objectModel ?? result.detailPath ?? '';
 }
 
+function creatorTypeForGeneratedContent(content: GeneratedContent): TemplateTypeKey {
+	if (content.contentType === 'npcStory') {
+		return 'npc';
+	}
+	if (content.contentType === 'npcStats' || content.contentType === 'npcFull') {
+		return 'npcStats';
+	}
+	return content.contentType;
+}
+
 function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps) {
 	const { user } = useAuth();
-	const idCounterRef = useRef(0);
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const loadedModuleIdRef = useRef<string | null>(null);
 
@@ -270,7 +281,7 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 		afterBlockId: string;
 	} | null>(null);
 	const [adventures, setAdventures] = useState<AdventureSection[]>(() => [
-		createAdventureSection(() => nextId(idCounterRef), 1)
+		createAdventureSection(1)
 	]);
 	const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 	const [saveMessage, setSaveMessage] = useState('');
@@ -308,6 +319,19 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 
 	const applyLoadedModule = (doc: ModuleDocument) => {
 		const resolvedId = String(doc._id);
+		const usedAdventureIds = new Set<string>();
+		const usedSectionIds = new Set<string>();
+		const uniqueLoadedId = (id: string, usedIds: Set<string>) => {
+			if (id && !usedIds.has(id)) {
+				usedIds.add(id);
+				return id;
+			}
+
+			const replacementId = createStoryItemId();
+			usedIds.add(replacementId);
+			return replacementId;
+		};
+
 		setModuleId(resolvedId);
 		moduleStatusRef.current = doc.status;
 		setModuleStatus(doc.status);
@@ -324,7 +348,7 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 						.slice()
 						.sort((a, b) => a.order - b.order)
 						.map((adventure) => ({
-							id: adventure.id,
+							id: uniqueLoadedId(adventure.id, usedAdventureIds),
 							title: adventure.title,
 							summary: adventure.summary ?? '',
 							estimatedPlayTime: adventure.estimatedPlayTime ?? 0,
@@ -334,7 +358,7 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 											.slice()
 											.sort((a, b) => a.order - b.order)
 											.map((section) => ({
-												id: section.id,
+												id: uniqueLoadedId(section.id, usedSectionIds),
 												type: (section.type === 'image' ? 'imageMap' : section.type) as StoryBlockType,
 												content: section.content ?? '',
 												imageID: section.imageID ?? '',
@@ -342,13 +366,13 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 											}))
 									: [
 											{
-												id: nextId(idCounterRef),
+												id: createStoryItemId(),
 												type: 'setting' as const,
 												content: ''
 											}
 									  ]
 						}))
-				: [createAdventureSection(() => nextId(idCounterRef), 1)]
+				: [createAdventureSection(1)]
 		);
 		loadedModuleIdRef.current = resolvedId;
 		setLastCreatorModuleId(resolvedId);
@@ -497,7 +521,7 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 	const addAdventure = () => {
 		setAdventures((previousAdventures) => [
 			...previousAdventures,
-			createAdventureSection(() => nextId(idCounterRef), previousAdventures.length + 1)
+			createAdventureSection(previousAdventures.length + 1)
 		]);
 	};
 
@@ -516,7 +540,7 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 					return adventure;
 				}
 
-				const nextBlock = { id: nextId(idCounterRef), type: blockType, content: '' };
+				const nextBlock = { id: createStoryItemId(), type: blockType, content: '' };
 				const nextBlocks = [...adventure.blocks];
 
 				if (
@@ -913,6 +937,19 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 			detail={contentWindow.contentWindowDetail}
 			isGeneratedContent={contentWindow.isGeneratedContent}
 			onGeneratedContentViewed={contentWindow.clearGeneratedContentHighlight}
+			generatedContent={contentWindow.generatedContent}
+			onSaveGeneratedContent={(generated) => {
+				navigate('/creator', {
+					state: {
+						initialContent: {
+							contentType: creatorTypeForGeneratedContent(generated),
+							title: typeof generated.data.name === 'string' ? generated.data.name : 'Untitled Content',
+							data: generated.data,
+							source: 'ai'
+						}
+					}
+				});
+			}}
 		/>
 	);
 
@@ -1451,13 +1488,13 @@ function ModuleCreateTemplate({ viewMode = 'editor' }: ModuleCreateTemplateProps
 	);
 }
 
-function createAdventureSection(nextIdFactory: () => string, position: number): AdventureSection {
+function createAdventureSection(position: number): AdventureSection {
 	return {
-		id: nextIdFactory(),
+		id: createStoryItemId(),
 		title: `Adventure ${position}`,
 		blocks: [
 			{
-				id: nextIdFactory(),
+				id: createStoryItemId(),
 				type: 'setting',
 				content: ''
 			}
@@ -1465,10 +1502,8 @@ function createAdventureSection(nextIdFactory: () => string, position: number): 
 	};
 }
 
-function nextId(counterRef: MutableRefObject<number>): string {
-	const nextValue = (counterRef.current ?? 0) + 1;
-	counterRef.current = nextValue;
-	return `story-template-item-${nextValue}`;
+function createStoryItemId(): string {
+	return crypto.randomUUID();
 }
 
 export default ModuleCreateTemplate;

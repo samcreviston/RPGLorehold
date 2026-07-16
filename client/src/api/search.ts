@@ -96,3 +96,84 @@ export async function searchModules(
 ): Promise<SearchModulesResponse> {
 	return apiRequest<SearchModulesResponse>(`/search${toQueryString(params)}`);
 }
+
+export type ContentSearchCategory = 'creatureNpc' | 'allItems' | 'other';
+
+export type ContentSearchHit = {
+	id: string;
+	slug: string;
+	contentType: string;
+	searchCategory: ContentSearchCategory;
+	title: string;
+	typeLabel: string;
+	description: string;
+	authorUsername: string;
+	publishedAt: number | null;
+	size?: string;
+	creatureType?: string;
+	alignment?: string;
+	challengeRating?: number;
+	armorClass?: string;
+	hitPoints?: string;
+	className?: string;
+	level?: number;
+	ancestry?: string;
+	category?: string;
+	rarity?: string;
+	cost?: string;
+	weight?: string;
+	damageDice?: string;
+	damageType?: string;
+	range?: string;
+	strengthRequired?: number;
+	spellSchool?: string;
+	castingTime?: string;
+	duration?: string;
+	hitDice?: string;
+	casterType?: string;
+	subclassOf?: string;
+	detail?: string;
+};
+
+export type SearchContentsParams = {
+	q?: string;
+	category: ContentSearchCategory;
+	contentTypes: string[];
+	sort?: string;
+	authorUsername?: string;
+	size?: string;
+	creatureType?: string;
+	alignment?: string;
+	className?: string;
+	ancestry?: string;
+	rarity?: string;
+	itemCategory?: string;
+	damageType?: string;
+	range?: string;
+	armorClass?: string;
+	strengthRequired?: string;
+	spellSchool?: string;
+	casterType?: string;
+	subclassOf?: string;
+	ritual?: boolean;
+	concentration?: boolean;
+	limit?: number;
+};
+
+export type SearchContentsResponse = Omit<SearchModulesResponse, 'hits'> & {
+	hits: ContentSearchHit[];
+};
+
+export async function searchContents(params: SearchContentsParams): Promise<SearchContentsResponse> {
+	const search = new URLSearchParams({
+		category: params.category,
+		contentTypes: params.contentTypes.join(','),
+		limit: String(params.limit ?? 20)
+	});
+	for (const [key, value] of Object.entries(params)) {
+		if (key !== 'category' && key !== 'contentTypes' && key !== 'limit' && value !== undefined && value !== '') {
+			search.set(key, String(value));
+		}
+	}
+	return apiRequest<SearchContentsResponse>(`/search/contents?${search.toString()}`);
+}

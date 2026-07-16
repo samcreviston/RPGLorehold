@@ -2,7 +2,14 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { addFavorite, listFavoriteModules, removeFavorite } from '../api/favorites';
 import { getPublishedModule } from '../api/modules';
-import { searchModules, type ModuleSearchHit, type SearchModulesParams } from '../api/search';
+import { getPublicContent } from '../api/contents';
+import {
+	searchContents,
+	searchModules,
+	type ContentSearchHit,
+	type ModuleSearchHit,
+	type SearchModulesParams
+} from '../api/search';
 import { useAuth } from '../auth/AuthContext';
 import SearchBar from '../components/common/SearchBar';
 import CampaignModulePickerDialog, {
@@ -14,11 +21,18 @@ import SearchFilters, {
 	emptySearchFilters,
 	type SearchFilterValues
 } from '../components/search/SearchFilters';
+import ContentSearchFilters, {
+	emptyContentFilters,
+	type ContentFilterValues
+} from '../components/search/ContentSearchFilters';
 import SearchResults from '../components/search/SearchResults';
 import SearchSort, { type SearchCategoryKey } from '../components/search/SearchSort';
 import SearchSortBy from '../components/search/SearchSortBy';
 import usePageMeta from '../hooks/usePageMeta';
 import type { ModuleDocument } from '../types/module';
+import type { ContentDocument } from '../types/content';
+import { contentToDetailView } from '../lib/content/contentSchema';
+import Open5eDetailCard from '../components/content/Open5eDetailCard';
 import { adventuresFromModuleDocument } from '../utils/modulePreviewModel';
 import './search-page.css';
 
@@ -58,6 +72,12 @@ function toSearchParams(filters: SearchFilterValues, sort: string, q: string): S
 	return params;
 }
 
+const defaultTypesByCategory = {
+	creatureNpc: ['monster', 'npc', 'premadeCharacter'],
+	allItems: ['item', 'weapon', 'armor', 'magicItem', 'beverageFood'],
+	other: ['spell', 'class', 'condition', 'spellSchool', 'service']
+} as const;
+
 function SearchPage() {
 	usePageMeta({
 		title: 'Search',
@@ -70,20 +90,31 @@ function SearchPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const initialQuery = searchParams.get('q') ?? '';
 	const viewModuleId = searchParams.get('view')?.trim() ?? '';
+	const viewContentSlug = searchParams.get('content')?.trim() ?? '';
 
-	const [pageTab, setPageTab] = useState<SearchPageTab>(viewModuleId ? 'view' : 'search');
+	const [pageTab, setPageTab] = useState<SearchPageTab>(viewModuleId || viewContentSlug ? 'view' : 'search');
 	const [category, setCategory] = useState<SearchCategoryKey>('content');
 	const [query, setQuery] = useState(initialQuery);
 	const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
 	const [filters, setFilters] = useState<SearchFilterValues>(emptySearchFilters);
+	const [contentFilters, setContentFilters] = useState<ContentFilterValues>(emptyContentFilters);
+	const [selectedTypesByCategory, setSelectedTypesByCategory] = useState<Record<string, string[]>>(
+		() => ({
+			creatureNpc: [...defaultTypesByCategory.creatureNpc],
+			allItems: [...defaultTypesByCategory.allItems],
+			other: [...defaultTypesByCategory.other]
+		})
+	);
 	const [sort, setSort] = useState('relevance');
 	const [hits, setHits] = useState<ModuleSearchHit[]>([]);
+	const [contentHits, setContentHits] = useState<ContentSearchHit[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [totalHits, setTotalHits] = useState(0);
 	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
 	const [viewedModule, setViewedModule] = useState<ModuleDocument | null>(null);
+	const [viewedContent, setViewedContent] = useState<ContentDocument | null>(null);
 	const [viewAuthorUsername, setViewAuthorUsername] = useState('');
 	const [viewLoading, setViewLoading] = useState(false);
 	const [viewError, setViewError] = useState<string | null>(null);
@@ -96,10 +127,10 @@ function SearchPage() {
 	}, [searchParams]);
 
 	useEffect(() => {
-		if (viewModuleId) {
+		if (viewModuleId || viewContentSlug) {
 			setPageTab('view');
 		}
-	}, [viewModuleId]);
+	}, [viewModuleId, viewContentSlug]);
 
 	useEffect(() => {
 		if (authLoading) {
@@ -130,24 +161,42 @@ function SearchPage() {
 	}, [authLoading, isAuthenticated]);
 
 	useEffect(() => {
-		if (category !== 'content') {
-			setHits([]);
-			setTotalHits(0);
-			setError(null);
-			setLoading(false);
-			return;
-		}
-
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
+		const selectedTypes = selectedTypesByCategory[category] ?? [];
+		if (category !== 'content' && selectedTypes.length === 0) {
+			setHits([]);
+			setContentHits([]);
+			setTotalHits(0);
+			setLoading(false);
+			return;
+		}
+		const request =
+			category === 'content'
+				? searchModules(toSearchParams(filters, sort, submittedQuery))
+				: searchContents({
+						q: submittedQuery,
+						category,
+						contentTypes: category === 'creatureNpc'
+							? selectedTypes.flatMap((type) => (type === 'npc' ? ['npc', 'npcStats'] : [type]))
+							: selectedTypes,
+						sort,
+						...contentFilters
+					});
 
-		void searchModules(toSearchParams(filters, sort, submittedQuery))
+		void request
 			.then((result) => {
 				if (cancelled) {
 					return;
 				}
-				setHits(result.hits);
+				if (category === 'content') {
+					setHits(result.hits as ModuleSearchHit[]);
+					setContentHits([]);
+				} else {
+					setContentHits(result.hits as ContentSearchHit[]);
+					setHits([]);
+				}
 				setTotalHits(result.estimatedTotalHits);
 			})
 			.catch((err: unknown) => {
@@ -155,6 +204,7 @@ function SearchPage() {
 					return;
 				}
 				setHits([]);
+				setContentHits([]);
 				setTotalHits(0);
 				setError(err instanceof Error ? err.message : 'Search failed');
 			})
@@ -167,7 +217,7 @@ function SearchPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [category, submittedQuery, filters, sort]);
+	}, [category, submittedQuery, filters, contentFilters, selectedTypesByCategory, sort]);
 
 	useEffect(() => {
 		if (!viewModuleId) {
@@ -209,13 +259,34 @@ function SearchPage() {
 		};
 	}, [viewModuleId]);
 
-	function syncSearchParams(nextQuery: string, nextViewId: string) {
+	useEffect(() => {
+		if (!viewContentSlug) {
+			setViewedContent(null);
+			return;
+		}
+		let cancelled = false;
+		void getPublicContent(viewContentSlug)
+			.then((content) => {
+				if (!cancelled) setViewedContent(content);
+			})
+			.catch((loadError: unknown) => {
+				if (!cancelled) setViewError(loadError instanceof Error ? loadError.message : 'Failed to load content');
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [viewContentSlug]);
+
+	function syncSearchParams(nextQuery: string, nextViewId: string, nextContentSlug = '') {
 		const next = new URLSearchParams();
 		if (nextQuery) {
 			next.set('q', nextQuery);
 		}
 		if (nextViewId) {
 			next.set('view', nextViewId);
+		}
+		if (nextContentSlug) {
+			next.set('content', nextContentSlug);
 		}
 		setSearchParams(next);
 	}
@@ -224,7 +295,7 @@ function SearchPage() {
 		const next = query.trim();
 		setSubmittedQuery(next);
 		setPageTab('search');
-		syncSearchParams(next, viewModuleId);
+		syncSearchParams(next, viewModuleId, viewContentSlug);
 	}
 
 	function openResult(moduleId: string) {
@@ -232,12 +303,19 @@ function SearchPage() {
 		syncSearchParams(submittedQuery.trim(), moduleId);
 	}
 
+	function openContentResult(hit: ContentSearchHit) {
+		setPageTab('view');
+		syncSearchParams(submittedQuery.trim(), '', hit.slug);
+	}
+
 	function selectPageTab(tab: SearchPageTab) {
 		setPageTab(tab);
 		if (tab === 'search') {
-			syncSearchParams(submittedQuery.trim(), viewModuleId);
+			syncSearchParams(submittedQuery.trim(), viewModuleId, viewContentSlug);
 		} else if (viewModuleId) {
 			syncSearchParams(submittedQuery.trim(), viewModuleId);
+		} else if (viewContentSlug) {
+			syncSearchParams(submittedQuery.trim(), '', viewContentSlug);
 		}
 	}
 
@@ -290,11 +368,16 @@ function SearchPage() {
 		});
 	}
 
-	const controlsDisabled = category !== 'content';
+	const controlsDisabled = false;
+	const selectedContentTypes = selectedTypesByCategory[category] ?? [];
 
 	const emptyMessage =
-		category !== 'content'
-			? 'This category is in progress — only Content (modules) is searchable today.'
+		category !== 'content' && selectedContentTypes.length === 0
+			? 'Select at least one content type to search.'
+			: category !== 'content'
+				? submittedQuery
+					? 'No published content matched your search.'
+					: 'No published content is indexed in this category yet.'
 			: submittedQuery
 				? 'No published modules matched your search.'
 				: totalHits === 0
@@ -339,26 +422,47 @@ function SearchPage() {
 							onChange={setQuery}
 							onSubmit={runSearch}
 						/>
-						<SearchSort selectedCategory={category} onChange={setCategory} />
-						<SearchFilters values={filters} onChange={setFilters} disabled={controlsDisabled} />
-						<SearchSortBy value={sort} onChange={setSort} disabled={controlsDisabled} />
+						<SearchSort
+							selectedCategory={category}
+							onChange={setCategory}
+							selectedTypes={selectedContentTypes}
+							onTypesChange={(types) =>
+								setSelectedTypesByCategory((current) => ({ ...current, [category]: types }))
+							}
+						/>
+						{category === 'content' ? (
+							<SearchFilters values={filters} onChange={setFilters} disabled={controlsDisabled} />
+						) : (
+							<ContentSearchFilters
+								category={category}
+								selectedTypes={selectedContentTypes}
+								values={contentFilters}
+								onChange={setContentFilters}
+							/>
+						)}
+						<SearchSortBy value={sort} onChange={setSort} disabled={controlsDisabled} category={category} />
 						<SearchResults
 							hits={category === 'content' ? hits : []}
-							loading={category === 'content' ? loading : false}
-							error={category === 'content' ? error : null}
+							contentHits={category === 'content' ? [] : contentHits}
+							contentCategory={category === 'content' ? undefined : category}
+							loading={loading}
+							error={error}
 							emptyMessage={emptyMessage}
 							favoriteIds={favoriteIds}
 							onSelectResult={openResult}
 							onFavoriteToggle={handleFavoriteToggle}
 							onAddToCampaign={openCampaignPicker}
+							onSelectContent={openContentResult}
 						/>
 					</>
 				) : (
 					<section className="search-view-panel" aria-label="Module view">
-						{!viewModuleId ? (
+						{!viewModuleId && !viewContentSlug ? (
 							<p className="search-view-empty">
-								Select a search result to view the full module here.
+								Select a search result to view it here.
 							</p>
+						) : viewedContent ? (
+							<Open5eDetailCard detail={contentToDetailView(viewedContent)} />
 						) : viewLoading ? (
 							<p>Loading module…</p>
 						) : viewError ? (
