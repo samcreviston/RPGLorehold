@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createContent, getContent, updateContent } from '../../api/contents';
+import ContentManagerTool from '../../components/content/ContentManagerTool';
+import ContentWindowTool from '../../components/content/ContentWindowTool';
 import Open5eDetailCard from '../../components/content/Open5eDetailCard';
+import LairChatTool from '../../components/lair/LairChatTool';
+import { useContentWindow } from '../../hooks/useContentWindow';
 import {
 	contentSchemaFor,
 	contentToDetailView,
 	normalizeContentData
 } from '../../lib/content/contentSchema';
 import type { ContentDocument, ContentSource, ContentVisibility } from '../../types/content';
+import type { TemplateTypeKey } from '../templateTypes';
 import './content-create-template.css';
 
 type CreatorViewMode = 'editor' | 'preview';
@@ -182,6 +187,16 @@ function stringValue(value: unknown): string {
 	return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 }
 
+function creatorTypeForGeneratedContent(contentType: string): TemplateTypeKey {
+	if (contentType === 'npcStory') {
+		return 'npc';
+	}
+	if (contentType === 'npcStats' || contentType === 'npcFull') {
+		return 'npcStats';
+	}
+	return contentType as TemplateTypeKey;
+}
+
 function ContentCreateTemplate({
 	contentType,
 	viewMode,
@@ -189,6 +204,7 @@ function ContentCreateTemplate({
 	initialContent
 }: ContentCreateTemplateProps) {
 	const navigate = useNavigate();
+	const contentWindow = useContentWindow();
 	const definition = useMemo(() => contentSchemaFor(contentType), [contentType]);
 	const isMonsterTemplate = contentType === 'monster';
 	const [content, setContent] = useState<ContentDocument | null>(null);
@@ -203,6 +219,7 @@ function ContentCreateTemplate({
 	const [visibility, setVisibility] = useState<ContentVisibility>('private');
 	const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 	const [error, setError] = useState('');
+	const [isSidebarToolsOpen, setIsSidebarToolsOpen] = useState(false);
 
 	useEffect(() => {
 		if (!contentId) {
@@ -333,6 +350,50 @@ function ContentCreateTemplate({
 			? (data.abilityScores as Record<string, number | ''>)
 			: null;
 	const monsterActions = isMonsterTemplate ? normalizeMonsterActions(data.actions) : [];
+	const sidebarTools = (
+		<aside className="sidebar-tools" aria-label="Sidebar tools">
+			<button
+				type="button"
+				className="sidebar-tools-summary"
+				onClick={() => setIsSidebarToolsOpen((previous) => !previous)}
+				aria-expanded={isSidebarToolsOpen}
+			>
+				Sidebar Tools
+			</button>
+			<div className={`sidebar-tools-content ${isSidebarToolsOpen ? 'sidebar-tools-content--open' : ''}`}>
+				<ContentManagerTool />
+				<ContentWindowTool
+					isOpen={contentWindow.isContentWindowOpen}
+					onToggleOpen={() => contentWindow.setIsContentWindowOpen((previous) => !previous)}
+					status={contentWindow.contentWindowStatus}
+					error={contentWindow.contentWindowError}
+					creature={contentWindow.contentWindowCreature}
+					detail={contentWindow.contentWindowDetail}
+					isGeneratedContent={contentWindow.isGeneratedContent}
+					onGeneratedContentViewed={contentWindow.clearGeneratedContentHighlight}
+					generatedContent={contentWindow.generatedContent}
+					onSaveGeneratedContent={(generated) => {
+						navigate('/creator', {
+							state: {
+								initialContent: {
+									contentType: creatorTypeForGeneratedContent(generated.contentType),
+									title: typeof generated.data.name === 'string' ? generated.data.name : 'Untitled Content',
+									data: generated.data,
+									source: 'ai'
+								}
+							}
+						});
+					}}
+				/>
+				<LairChatTool
+					onGeneratedContent={(generated) => {
+						setIsSidebarToolsOpen(true);
+						contentWindow.openGeneratedContentInWindow(generated);
+					}}
+				/>
+			</div>
+		</aside>
+	);
 
 	if (viewMode === 'preview') {
 		return <Open5eDetailCard detail={contentToDetailView({ title, contentType, data })} />;
@@ -340,11 +401,12 @@ function ContentCreateTemplate({
 
 	if (isMonsterTemplate) {
 		return (
-			<section className="content-create-template content-create-template--monster" aria-label={`${definition.label} editor`}>
-				<header>
+			<section className="content-create-workspace">
+				<div className="content-create-template content-create-template--monster" aria-label={`${definition.label} editor`}>
+					<header>
 					<h2>{definition.label} Editor</h2>
 					<p>{definition.description}</p>
-				</header>
+					</header>
 				<label>
 					Name
 					<input value={title} onChange={(event) => setTitle(event.target.value)} required />
@@ -505,16 +567,19 @@ function ContentCreateTemplate({
 				</div>
 				{status === 'saved' ? <p role="status">Saved.</p> : null}
 				{status === 'error' ? <p role="alert">{error}</p> : null}
+				</div>
+				{sidebarTools}
 			</section>
 		);
 	}
 
 	return (
-		<section className="content-create-template" aria-label={`${definition.label} editor`}>
-			<header>
+		<section className="content-create-workspace">
+			<div className="content-create-template" aria-label={`${definition.label} editor`}>
+				<header>
 				<h2>{definition.label} Editor</h2>
 				<p>{definition.description}</p>
-			</header>
+				</header>
 			<label>
 				Name
 				<input value={title} onChange={(event) => setTitle(event.target.value)} required />
@@ -593,6 +658,8 @@ function ContentCreateTemplate({
 			</div>
 			{status === 'saved' ? <p role="status">Saved.</p> : null}
 			{status === 'error' ? <p role="alert">{error}</p> : null}
+			</div>
+			{sidebarTools}
 		</section>
 	);
 }
